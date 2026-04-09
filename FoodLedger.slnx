@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="FoodLedger.AppHost/FoodLedger.AppHost.csproj" />
+  <Project Path="FoodLedger.ServiceDefaults/FoodLedger.ServiceDefaults.csproj" />
+  <Project Path="FoodLedger/FoodLedger.csproj" />
+</Solution>

@@ -1,0 +1,26 @@
+## [Visual Studio 官方標準設定]
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## [ASP.NET Core]
+appsettings.Development.json
+# 注意：雖然 User Secrets 不在專案目錄，但如果有自訂開發設定檔也要排除
+secrets.json
+
+## [Docker]
+.dockerignore
+
+## [Aspire]
+# Aspire 產生的暫存檔
+.aspire/
+
+## [作業系統]
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
