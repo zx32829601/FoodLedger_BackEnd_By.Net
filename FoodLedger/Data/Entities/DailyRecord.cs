@@ -22,4 +22,10 @@ public class DailyRecord : BaseEntity
 
     [Column("consumed_at")]
     public DateTimeOffset ConsumedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    [ForeignKey(nameof(UserId))]
+    public virtual ApplicationUser User { get; set; } = null!;
+
+    [ForeignKey(nameof(FoodId))]
+    public virtual SimpleFood Food { get; set; } = null!;
 }

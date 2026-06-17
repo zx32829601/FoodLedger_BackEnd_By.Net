@@ -19,7 +19,8 @@ namespace FoodLedger.Data.Entities
         public decimal Amount { get; set; }
 
         [Column("per_unit")]
-        public string PerUnit { get; set; } = "'100g";
+        [MaxLength(20)]
+        public string PerUnit { get; set; } = "100";
 
         // 導覽屬性 (Navigation Properties)
         [ForeignKey(nameof(FoodId))]

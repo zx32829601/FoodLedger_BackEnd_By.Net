@@ -7,6 +7,7 @@ namespace FoodLedger.Data.Entities
     public class FoodCategoryTranslation : BaseEntity
     {
         [Key]
+        [Column("translation_id")]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long TranslationId { get; set; }
 

@@ -1,6 +1,6 @@
 @FoodLedger_HostAddress = http://localhost:5062
 
-GET {{FoodLedger_HostAddress}}/weatherforecast/
+GET {{FoodLedger_HostAddress}}/api/TestDb/check-connection
 Accept: application/json
 
 ###

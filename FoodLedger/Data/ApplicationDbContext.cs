@@ -1,181 +1,176 @@
-﻿using FoodLedger.Data.Entities;
+using FoodLedger.Data.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<long>, long>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
     }
 
-    // 定義設定的Table Class
-    public DbSet<DailyRecord> DailyRecords { get; set; }
-    public DbSet<UserAccount> UserAccounts { get; set; }
-    public DbSet<SimpleFood> SimpleFoods { get; set; }
-    public DbSet<SimpleFoodTranslation> SimpleFoodTranslations { get; set; }
-    public DbSet<SimpleFoodCategory> SimpleFoodCategories { get; set; }
-    public DbSet<FoodCategory> FoodCategories { get; set; }
-    public DbSet<FoodCategoryTranslation> FoodCategoryTranslations { get; set; }
-
-    public DbSet<FoodNutrient> FoodNutrients { get; set; }
-    public DbSet<Nutrient> Nutrients { get; set; }
-    public DbSet<NutrientTranslation> NutrientTranslations { get; set; }
-
-
-
+    public DbSet<DailyRecord> DailyRecords => Set<DailyRecord>();
+    public DbSet<SimpleFood> SimpleFoods => Set<SimpleFood>();
+    public DbSet<SimpleFoodTranslation> SimpleFoodTranslations => Set<SimpleFoodTranslation>();
+    public DbSet<SimpleFoodCategory> SimpleFoodCategories => Set<SimpleFoodCategory>();
+    public DbSet<FoodCategory> FoodCategories => Set<FoodCategory>();
+    public DbSet<FoodCategoryTranslation> FoodCategoryTranslations => Set<FoodCategoryTranslation>();
+    public DbSet<FoodNutrient> FoodNutrients => Set<FoodNutrient>();
+    public DbSet<Nutrient> Nutrients => Set<Nutrient>();
+    public DbSet<NutrientTranslation> NutrientTranslations => Set<NutrientTranslation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
-        modelBuilder.Entity<DailyRecord>(entity =>
+        modelBuilder.Entity<ApplicationUser>(entity =>
         {
-            entity.HasKey(e => e.RecordId);
+            entity.ToTable("application_user");
 
-            // 讓 created_at 在資料庫端自動生成 now()
+            entity.Property(e => e.Id)
+                .HasColumnName("user_id");
+
+            entity.Property(e => e.DisplayName)
+                .HasMaxLength(50)
+                .HasColumnName("display_name");
+
             entity.Property(e => e.CreatedAt)
-                  .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnName("created_at");
 
             entity.Property(e => e.ModifiedAt)
-                  .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnName("modified_at");
 
-            entity.Property(e => e.RecordId)
-                  .UseIdentityByDefaultColumn();
+            entity.Property(e => e.UserName).HasColumnName("user_name");
+            entity.Property(e => e.NormalizedUserName).HasColumnName("normalized_user_name");
+            entity.Property(e => e.Email).HasColumnName("email");
+            entity.Property(e => e.NormalizedEmail).HasColumnName("normalized_email");
+            entity.Property(e => e.EmailConfirmed).HasColumnName("email_confirmed");
+            entity.Property(e => e.PasswordHash).HasColumnName("password_hash");
+            entity.Property(e => e.SecurityStamp).HasColumnName("security_stamp");
+            entity.Property(e => e.ConcurrencyStamp).HasColumnName("concurrency_stamp");
+            entity.Property(e => e.PhoneNumber).HasColumnName("phone_number");
+            entity.Property(e => e.PhoneNumberConfirmed).HasColumnName("phone_number_confirmed");
+            entity.Property(e => e.TwoFactorEnabled).HasColumnName("two_factor_enabled");
+            entity.Property(e => e.LockoutEnd).HasColumnName("lockout_end");
+            entity.Property(e => e.LockoutEnabled).HasColumnName("lockout_enabled");
+            entity.Property(e => e.AccessFailedCount).HasColumnName("access_failed_count");
+
+            entity.HasIndex(e => e.NormalizedEmail)
+                .HasDatabaseName("ix_application_user_normalized_email");
+
+            entity.HasIndex(e => e.NormalizedUserName)
+                .IsUnique()
+                .HasDatabaseName("ix_application_user_normalized_user_name");
         });
 
-        modelBuilder.Entity<UserAccount>(entity =>
+        modelBuilder.Entity<IdentityRole<long>>(entity =>
         {
-            entity.HasKey(e => e.UserId);
-            
-            entity.Property(e => e.CreatedAt)
-                  .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.ToTable("application_role");
+            entity.Property(e => e.Id).HasColumnName("role_id");
+            entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(e => e.NormalizedName).HasColumnName("normalized_name");
+            entity.Property(e => e.ConcurrencyStamp).HasColumnName("concurrency_stamp");
 
-            entity.Property(e => e.ModifiedAt)
-                  .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-            entity.Property(e => e.UserId)
-                  .UseIdentityByDefaultColumn();
+            entity.HasIndex(e => e.NormalizedName)
+                .IsUnique()
+                .HasDatabaseName("ix_application_role_normalized_name");
         });
 
-        modelBuilder.Entity<SimpleFoodTranslation>(entity =>
+        modelBuilder.Entity<IdentityUserRole<long>>(entity =>
         {
-            entity.HasKey(e => e.TranslationId);
-
-            entity.Property(e => e.TranslationId)
-                  .UseIdentityByDefaultColumn();
-
-            //設定複合索引(FoodId, LangCode)，確保同一食物在同一語言下只有一筆翻譯
-            entity.HasIndex(e => new { e.FoodId, e.LangCode })
-              .IsUnique()
-              .HasDatabaseName("ix_food_translation_food_id_lang_code");
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.ModifiedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.ToTable("application_user_role");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.RoleId).HasColumnName("role_id");
         });
 
-        modelBuilder.Entity<SimpleFood>(entity =>
+        modelBuilder.Entity<IdentityUserClaim<long>>(entity =>
         {
-            entity.HasKey(e => e.FoodId);
-            entity.Property(e => e.FoodId).UseIdentityByDefaultColumn();
-
-            // 設定 FoodCode 為唯一索引，確保每個食物代碼只能有一筆資料
-            entity.HasIndex(e => e.FoodCode).IsUnique();
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.ModifiedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.ToTable("application_user_claim");
+            entity.Property(e => e.Id).HasColumnName("user_claim_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.ClaimType).HasColumnName("claim_type");
+            entity.Property(e => e.ClaimValue).HasColumnName("claim_value");
         });
 
-        modelBuilder.Entity<SimpleFoodCategory>(entity =>
+        modelBuilder.Entity<IdentityUserLogin<long>>(entity =>
         {
-            // 設定複合主鍵，確保同一食物和類別的組合只能有一筆資料
-            entity.HasKey(fc => new { fc.FoodId, fc.CategoryId });
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.ModifiedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.ToTable("application_user_login");
+            entity.Property(e => e.LoginProvider).HasColumnName("login_provider");
+            entity.Property(e => e.ProviderKey).HasColumnName("provider_key");
+            entity.Property(e => e.ProviderDisplayName).HasColumnName("provider_display_name");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
         });
 
-        modelBuilder.Entity<FoodCategory>(entity =>
+        modelBuilder.Entity<IdentityRoleClaim<long>>(entity =>
         {
-            entity.HasKey(e => e.CategoryId);
-            entity.Property(e => e.CategoryId).UseIdentityByDefaultColumn();
-
-            // 設定 CategoryCode 為唯一索引，確保每個類別只能有一筆資料
-            entity.HasIndex(e => e.CategoryCode).IsUnique();
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.ModifiedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.ToTable("application_role_claim");
+            entity.Property(e => e.Id).HasColumnName("role_claim_id");
+            entity.Property(e => e.RoleId).HasColumnName("role_id");
+            entity.Property(e => e.ClaimType).HasColumnName("claim_type");
+            entity.Property(e => e.ClaimValue).HasColumnName("claim_value");
         });
 
-        modelBuilder.Entity<FoodCategoryTranslation>(entity =>
+        modelBuilder.Entity<IdentityUserToken<long>>(entity =>
         {
-            entity.HasKey(e => e.TranslationId);
-
-            entity.Property(e => e.TranslationId)
-                  .UseIdentityByDefaultColumn();
-
-            //設定複合索引(CategoryId, LangCode)，確保同一類別在同一語言下只有一筆翻譯
-            entity.HasIndex(e => new { e.CategoryId, e.LangCode })
-              .IsUnique()
-              .HasDatabaseName("idx_category_translation_category_id_lang_code");
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.ModifiedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-        });
-
-        modelBuilder.Entity<FoodNutrient>(entity =>
-        {
-            // 設定複合主鍵，確保同一食物和營養素的組合只能有一筆資料
-            entity.HasKey(fc => new { fc.FoodId, fc.NutrientId });
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.ModifiedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-        });
-
-        modelBuilder.Entity<Nutrient>(entity =>
-        {
-            entity.HasKey(e => e.NutrientId);
-
-            entity.Property(e => e.NutrientId)
-                  .UseIdentityByDefaultColumn();
-
-            // 設定 NutrientCode 為唯一索引，確保每個營養素代碼只能有一筆資料
-            entity.HasIndex(e => e.NutrientCode).IsUnique();
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.ModifiedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-        });
-
-        modelBuilder.Entity<NutrientTranslation>(entity =>
-        {
-            entity.HasKey(e => e.TranslationId);
-
-            entity.Property(e => e.TranslationId)
-                  .UseIdentityByDefaultColumn();
-
-            //設定複合索引(NutrientId, LangCode)，確保同一營養素在同一語言下只有一筆翻譯
-            entity.HasIndex(e => new { e.NutrientId, e.LangCode })
-              .IsUnique()
-              .HasDatabaseName("idx_category_translation_nutrient_id_lang_code");
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.ModifiedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.ToTable("application_user_token");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.LoginProvider).HasColumnName("login_provider");
+            entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(e => e.Value).HasColumnName("value");
         });
     }
 
-    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
-        var entries = ChangeTracker.Entries()
-            .Where(e => e.Entity is BaseEntity && (e.State == EntityState.Added || e.State == EntityState.Modified));
+        ApplyAuditValues();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        ApplyAuditValues();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void ApplyAuditValues()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var entries = ChangeTracker.Entries<BaseEntity>()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified);
 
         foreach (var entityEntry in entries)
         {
-            ((BaseEntity)entityEntry.Entity).ModifiedAt = DateTimeOffset.UtcNow;
-
             if (entityEntry.State == EntityState.Added)
             {
-                ((BaseEntity)entityEntry.Entity).CreatedAt = DateTimeOffset.UtcNow;
+                entityEntry.Entity.CreatedAt = now;
+                entityEntry.Entity.ModifiedAt = now;
+                continue;
             }
+
+            entityEntry.Property(nameof(BaseEntity.CreatedAt)).IsModified = false;
+            entityEntry.Entity.ModifiedAt = now;
         }
 
-        return base.SaveChangesAsync(cancellationToken);
+        var userEntries = ChangeTracker.Entries<ApplicationUser>()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified);
+
+        foreach (var userEntry in userEntries)
+        {
+            if (userEntry.State == EntityState.Added)
+            {
+                userEntry.Entity.CreatedAt = now;
+                userEntry.Entity.ModifiedAt = now;
+                continue;
+            }
+
+            userEntry.Property(nameof(ApplicationUser.CreatedAt)).IsModified = false;
+            userEntry.Entity.ModifiedAt = now;
+        }
     }
 }
