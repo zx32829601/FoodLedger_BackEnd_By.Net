@@ -260,6 +260,8 @@ Example: `feat/add-daily-record`
 
 `<type>: <summary>`
 
+Commit message 的標題維持 `<type>: <summary>` 格式即可，summary 可使用英文；commit body 的說明與 Pull Request 的詳細內容需使用繁體中文撰寫，讓團隊能直接理解變更目的、影響範圍與驗證結果。
+
 Examples:
 - `docs: update project overview`
 - `feat: add daily record api`
