@@ -9,7 +9,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 ### P0：帳號與核心架構
 
 - [x] 導入 ASP.NET Core Identity，使用 `ApplicationUser : IdentityUser<long>` 作為使用者模型。
-- [x] 移除早期自建帳號模型 `UserAccount`，帳號、密碼、角色與授權統一交由 ASP.NET Core Identity 管理。
+- [x] 不再使用早期自建帳號模型 `UserAccount`；既有 migration 已移除 legacy `user_account` 資料表，帳號、密碼、角色與授權統一交由 ASP.NET Core Identity 管理。
 - [ ] 建立 `ICurrentUserService`，讓 Service 層可取得目前登入使用者，不直接依賴 `HttpContext`。
 - [ ] 檢查 `DailyRecord.UserId` 與 `ApplicationUser.Id` 的關聯、索引與刪除行為。
 - [ ] 確認所有需要登入的 API 加上 `[Authorize]`。
@@ -163,7 +163,7 @@ AppHost 會啟動 `FoodLedger` API，並提供 Aspire dashboard 觀察 logs、he
 app.MapIdentityApi<ApplicationUser>();
 ```
 
-帳號、密碼雜湊、登入驗證、角色儲存與授權流程統一交由 ASP.NET Core Identity 管理。早期自建帳號資料表 `user_account` 已被視為 legacy table，後續不再使用。
+帳號、密碼雜湊、登入驗證、角色儲存與授權流程統一交由 ASP.NET Core Identity 管理。早期自建帳號資料表 `user_account` 已在既有 migration 中移除，後續不再作為帳號來源。
 
 ## 架構原則
 
