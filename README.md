@@ -1,15 +1,51 @@
-# FoodLedger 開發環境啟動指南
+# FoodLedger 後端專案
 
-FoodLedger 是一個飲食紀錄與營養管理系統，後端以 ASP.NET Core Web API、Entity Framework Core、PostgreSQL、ASP.NET Core Identity 與 .NET Aspire 建立。
+FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者記錄每日飲食、查詢食物營養資訊，並依據飲食紀錄統計每日營養攝取狀況。
 
-這份 README 主要說明如何在本機開啟專案、設定資料庫連線、套用 Migration、啟動 API 與確認 Swagger 是否可用。
+目前專案處於後端資料模型與 API 骨架階段，已建立 ASP.NET Core Web API、Entity Framework Core、PostgreSQL、ASP.NET Core Identity、.NET Aspire AppHost、ServiceDefaults、Swagger / OpenAPI 與 Web API Dockerfile。
 
-## 專案內容
+## TODO List
 
-目前主要專案如下：
+### P0：帳號與核心架構
+
+- [x] 導入 ASP.NET Core Identity，使用 `ApplicationUser : IdentityUser<long>` 作為使用者模型。
+- [x] 不再使用早期自建帳號模型 `UserAccount`；既有 migration 已移除 legacy `user_account` 資料表，帳號、密碼、角色與授權統一交由 ASP.NET Core Identity 管理。
+- [ ] 建立 `ICurrentUserService`，讓 Service 層可取得目前登入使用者，不直接依賴 `HttpContext`。
+- [ ] 檢查 `DailyRecord.UserId` 與 `ApplicationUser.Id` 的關聯、索引與刪除行為。
+- [ ] 確認所有需要登入的 API 加上 `[Authorize]`。
+- [ ] 確認管理員 API 使用 `[Authorize(Roles = "Admin")]`。
+
+### P1：後端分層與核心功能
+
+- [ ] 建立 Service 層架構，避免 Controller 直接放商業邏輯。
+- [ ] 建立 Request / Response DTO，API response 不直接暴露 Entity。
+- [ ] 實作食物查詢 API，支援關鍵字、分類與語系查詢。
+- [ ] 實作每日飲食紀錄 API，支援新增、查詢、修改與刪除自己的紀錄。
+- [ ] 實作營養攝取統計 Service，依每日紀錄彙總熱量與各營養素攝取量。
+- [ ] 補齊一致的錯誤回應格式，避免對外回傳內部 exception detail。
+
+### P2：測試與資料品質
+
+- [ ] 新增獨立測試專案 `FoodLedger.Tests`，使用 NUnit 4.x。
+- [ ] 為 Service 層補單元測試或接近整合測試的 EF Core InMemory 測試。
+- [ ] 補食物查詢、分類篩選、營養素換算、每日飲食紀錄與使用者資料隔離測試。
+- [ ] 補 API route、驗證與授權整合測試。
+- [ ] 評估涉及 PostgreSQL 行為、Migration 或交易情境的 Testcontainers 測試。
+- [ ] 逐步達到最低測試覆蓋率 70%。
+
+### P3：部署、前端與維運
+
+- [ ] 建立 Docker Compose，編排 Web API 與 PostgreSQL 本機環境。
+- [ ] 建立 CI/CD 流程，包含 restore、build、test、映像檔產生與部署。
+- [ ] 規劃 React + TypeScript + Vite Web 前台。
+- [ ] 規劃 React + TypeScript + Vite 管理後台。
+- [ ] 規劃 Flutter App。
+- [ ] 補充基礎資料匯入流程，例如食物、分類、營養素與多語系翻譯資料。
+
+## 專案結構
 
 ```text
-FoodLedger/
+FoodLedger_BackEnd_By.Net/
 ├─ FoodLedger.slnx
 ├─ FoodLedger/
 │  ├─ Controllers/
@@ -17,126 +53,81 @@ FoodLedger/
 │  │  ├─ ApplicationDbContext.cs
 │  │  ├─ Configurations/
 │  │  └─ Entities/
+│  ├─ DTOs/
 │  ├─ Migrations/
+│  ├─ Models/
+│  ├─ Services/
 │  ├─ Program.cs
 │  └─ Dockerfile
 ├─ FoodLedger.AppHost/
 │  └─ AppHost.cs
 ├─ FoodLedger.ServiceDefaults/
 │  └─ Extensions.cs
-└─ AGENTS.md
+├─ AGENTS.md
+└─ README.md
 ```
 
-## 前置需求
+## 技術棧
 
-開啟專案前，請先確認本機已安裝：
+- .NET 10
+- ASP.NET Core Web API
+- ASP.NET Core Identity
+- Entity Framework Core
+- PostgreSQL
+- Npgsql Entity Framework Core Provider
+- Swagger / OpenAPI
+- .NET Aspire AppHost
+- .NET Aspire ServiceDefaults、OpenTelemetry、Health Checks
+- Dockerfile
+
+## 本機需求
 
 - .NET 10 SDK
 - PostgreSQL
-- Visual Studio、Rider 或 VS Code
 - Git
-- Docker Desktop，只有在需要測試 Dockerfile 或後續 Docker Compose 時才需要
+- Visual Studio、Rider 或 VS Code
+- Docker Desktop，若需要執行容器化環境
 
-可用以下指令確認 .NET SDK：
+確認 .NET SDK：
 
 ```powershell
 dotnet --version
 ```
 
-## 取得專案
-
-```powershell
-git clone https://github.com/zx32829601/FoodLedger_BackEnd_By.Net.git
-cd FoodLedger_BackEnd_By.Net
-```
-
-如果已經有本機專案，只需要進入專案根目錄：
-
-```powershell
-cd C:\Users\zx328\OneDrive\桌面\SideProject\FoodLedger
-```
-
-## 開啟方案
-
-### Visual Studio
-
-1. 開啟 Visual Studio。
-2. 選擇「Open a project or solution」。
-3. 選取 `FoodLedger.slnx`。
-4. 將啟動專案設為 `FoodLedger` 或 `FoodLedger.AppHost`。
-
-### Rider
-
-1. 開啟 Rider。
-2. 選擇「Open」。
-3. 選取專案根目錄或 `FoodLedger.slnx`。
-4. 等待 NuGet restore 完成。
-
-### VS Code
-
-```powershell
-code .
-```
-
-建議安裝 C# Dev Kit，並在 VS Code 中選擇 `FoodLedger.slnx` 作為方案。
-
-## 還原套件與建置
-
-第一次開啟專案後，先還原 NuGet 套件：
+## 還原與建置
 
 ```powershell
 dotnet restore .\FoodLedger.slnx
-```
-
-確認專案可正常建置：
-
-```powershell
 dotnet build .\FoodLedger.slnx
 ```
 
-## 設定資料庫連線
+## 資料庫連線
 
-專案預設讀取 `DefaultConnection`：
-
-```json
-"DefaultConnection": "Host=localhost;Database=Foodledger;Username=postgres;Password=YOUR_SECRET_PASSWORD"
-```
-
-不要把真實密碼寫進 Git。建議使用 User Secrets 設定本機連線字串：
+請使用 User Secrets、環境變數或部署環境設定提供連線字串，不要把真實密碼寫入 Git。
 
 ```powershell
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Database=Foodledger;Username=postgres;Password=你的本機密碼" --project .\FoodLedger\FoodLedger.csproj
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Database=Foodledger;Username=postgres;Password=YOUR_SECRET_PASSWORD" --project .\FoodLedger\FoodLedger.csproj
 ```
 
-確認 PostgreSQL 中已建立資料庫：
+建立本機 PostgreSQL 資料庫：
 
 ```sql
 CREATE DATABASE "Foodledger";
 ```
 
-## 套用 Migration
-
-在資料庫連線設定完成後，執行 EF Core Migration：
+套用 EF Core Migration：
 
 ```powershell
 dotnet ef database update --project .\FoodLedger\FoodLedger.csproj --startup-project .\FoodLedger\FoodLedger.csproj
 ```
 
-如果本機尚未安裝 `dotnet-ef` 工具，可先安裝：
+若尚未安裝 `dotnet-ef`：
 
 ```powershell
 dotnet tool install --global dotnet-ef
 ```
 
-若已安裝但版本過舊，可更新：
-
-```powershell
-dotnet tool update --global dotnet-ef
-```
-
 ## 啟動 Web API
-
-直接啟動 Web API：
 
 ```powershell
 dotnet run --project .\FoodLedger\FoodLedger.csproj
@@ -149,109 +140,59 @@ http://localhost:5062
 https://localhost:7041
 ```
 
-Swagger UI：
+Swagger UI 僅應在 Development 環境啟用：
 
 ```text
 http://localhost:5062/swagger
 https://localhost:7041/swagger
 ```
 
-## 使用 Aspire AppHost 啟動
-
-也可以透過 Aspire AppHost 啟動專案：
+## 啟動 Aspire AppHost
 
 ```powershell
 dotnet run --project .\FoodLedger.AppHost\FoodLedger.AppHost.csproj
 ```
 
-AppHost 會啟動 `FoodLedger` API，並提供 Aspire dashboard 觀察服務狀態、logs 與健康檢查。
+AppHost 會啟動 `FoodLedger` API，並提供 Aspire dashboard 觀察 logs、health checks 與服務狀態。
 
-## 身分驗證端點
+## 身分驗證
 
-目前專案已使用 ASP.NET Core Identity API endpoints：
+專案使用 ASP.NET Core Identity：
 
 ```csharp
 app.MapIdentityApi<ApplicationUser>();
 ```
 
-啟動後可透過 Swagger 或 HTTP client 測試註冊、登入與 bearer token 流程。實際端點會依 ASP.NET Core Identity API endpoints 的預設路由產生。
+帳號、密碼雜湊、登入驗證、角色儲存與授權流程統一交由 ASP.NET Core Identity 管理。早期自建帳號資料表 `user_account` 已在既有 migration 中移除，後續不再作為帳號來源。
+
+## 架構原則
+
+- Controller 只負責 HTTP request / response、驗證與授權。
+- 商業邏輯放在 Service 層。
+- 資料存取透過 `ApplicationDbContext`。
+- 資料庫 I/O 優先使用 EF Core async API。
+- API response 使用 DTO / Response model，不直接暴露 Entity。
+- 需要登入的 API 必須加上 `[Authorize]`。
+- 管理員 API 必須加上 role-based authorization。
+- 使用者只能操作自己的 `DailyRecord`，不得信任前端傳入的 `UserId`。
+- 時間欄位統一使用 UTC。
 
 ## 常用檢查指令
 
-檢查 NuGet 套件弱點：
+檢查套件弱點：
 
 ```powershell
 dotnet list .\FoodLedger.slnx package --vulnerable --include-transitive
 ```
 
-檢查過期套件：
+檢查套件更新：
 
 ```powershell
 dotnet list .\FoodLedger.slnx package --outdated --include-transitive
 ```
 
-清除建置輸出：
+清理建置輸出：
 
 ```powershell
 dotnet clean .\FoodLedger.slnx
 ```
-
-## 目前開發狀態
-
-已完成：
-
-- ASP.NET Core Web API 專案骨架
-- .NET Aspire AppHost 與 ServiceDefaults
-- EF Core + PostgreSQL 設定
-- ASP.NET Core Identity 初步導入
-- 食物、分類、營養素、多語系翻譯與每日飲食紀錄資料模型
-- EF Core Migration
-- Swagger / OpenAPI 開發文件
-
-尚未完成：
-
-- Service 層商業邏輯
-- Request / Response DTO
-- 食物查詢 API
-- 每日飲食紀錄 CRUD API
-- 營養統計 API
-- 獨立測試專案
-- Docker Compose
-- CI/CD
-- Flutter App
-- React Web 前台與後台
-
-## 疑難排解
-
-### 無法連線 PostgreSQL
-
-請確認：
-
-- PostgreSQL 服務已啟動。
-- `Foodledger` 資料庫已建立。
-- User Secrets 中的帳號、密碼與連線埠正確。
-- 防火牆或本機安全軟體沒有阻擋 PostgreSQL port。
-
-### 找不到 `dotnet ef`
-
-請安裝或更新 EF Core CLI：
-
-```powershell
-dotnet tool install --global dotnet-ef
-dotnet tool update --global dotnet-ef
-```
-
-### Swagger 無法開啟
-
-請確認目前環境是 Development，並檢查 `Properties/launchSettings.json` 中的 `ASPNETCORE_ENVIRONMENT` 是否為 `Development`。
-
-## 開發規範
-
-詳細開發規範請閱讀 `AGENTS.md`。新增功能時請遵守：
-
-- Controller 只處理 HTTP request / response、驗證與授權。
-- 商業邏輯放在 Service 層。
-- 資料存取透過 `ApplicationDbContext`。
-- API response 不直接回傳 Entity。
-- 需要登入的 API 必須加上 `[Authorize]`。
-- Commit message 的標題可維持英文格式，commit body 與 PR 詳細內容需使用繁體中文。
