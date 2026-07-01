@@ -12,6 +12,7 @@ namespace FoodLedger.Data.Entities
         public long FoodId { get; set; }
 
         [Column("food_code")]
+        [MaxLength(50)]
         [Required]
         public required string FoodCode { get; set; }
 
