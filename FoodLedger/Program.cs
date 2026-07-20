@@ -1,4 +1,5 @@
 using FoodLedger.Data.Entities;
+using FoodLedger.Infrastructure.Mvc;
 using FoodLedger.Services;
 using FoodLedger.Swagger;
 using Microsoft.AspNetCore.Identity;
@@ -37,7 +38,12 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApplicationPartManager(partManager =>
+    {
+        partManager.FeatureProviders.Add(
+            new DevelopmentOnlyControllerFeatureProvider(builder.Environment.IsDevelopment()));
+    });
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer(); // 讓 Swagger 找到你的 API

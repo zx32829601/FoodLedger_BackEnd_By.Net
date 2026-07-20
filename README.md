@@ -13,8 +13,8 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 建立 `ICurrentUserService`，讓 Service 層可取得目前登入使用者，不直接依賴 `HttpContext`。
 - [x] 新增 `GET /api/users/me`，讓登入使用者可查詢目前 request 解析出的使用者資訊。
 - [x] 設定 Swagger Bearer token 驗證輸入，方便在 Swagger UI 測試需要登入的 API。
-- [ ] 檢查 `DailyRecord.UserId` 與 `ApplicationUser.Id` 的關聯、索引與刪除行為。
-- [ ] 確認所有需要登入的 API 加上 `[Authorize]`。
+- [x] 檢查 `DailyRecord.UserId` 與 `ApplicationUser.Id` 的關聯、索引與刪除行為，並以模型測試固定 FK、`Restrict` 與 `UserId + ConsumedAt` 複合索引。
+- [x] 確認所有需要登入的 API 加上 `[Authorize]`，並讓開發診斷用 Controller 僅在 Development 環境註冊。
 - [ ] 確認管理員 API 使用 `[Authorize(Roles = "Admin")]`。
 
 ### P1：後端分層與核心功能
@@ -30,6 +30,8 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 
 - [x] 新增獨立測試專案 `FoodLedger.Tests`，使用 NUnit 4.x。
 - [x] 為 `ICurrentUserService` 與 `UsersController` 補上 NUnit 測試。
+- [x] 為 `DailyRecord.UserId` 與 `ApplicationUser.Id` 的模型關聯、刪除行為與查詢索引補上 NUnit 測試。
+- [x] 為 Controller 授權邊界與 Development-only Controller 註冊規則補上 NUnit 測試。
 - [ ] 為 Service 層補單元測試或接近整合測試的 EF Core InMemory 測試。
 - [ ] 補食物查詢、分類篩選、營養素換算、每日飲食紀錄與使用者資料隔離測試。
 - [ ] 補 API route、驗證與授權整合測試。
@@ -61,6 +63,8 @@ FoodLedger_BackEnd_By.Net/
 │  │  └─ Users/
 │  ├─ Migrations/
 │  ├─ Models/
+│  ├─ Infrastructure/
+│  │  └─ Mvc/
 │  ├─ Services/
 │  │  ├─ CurrentUserService.cs
 │  │  └─ ICurrentUserService.cs
@@ -72,6 +76,7 @@ FoodLedger_BackEnd_By.Net/
 │  └─ Extensions.cs
 ├─ FoodLedger.Tests/
 │  ├─ Controllers/
+│  ├─ Data/
 │  └─ Services/
 ├─ AGENTS.md
 └─ README.md
@@ -185,6 +190,8 @@ Authorization: Bearer {accessToken}
 ```
 
 Swagger UI 已設定 Bearer token 驗證輸入。登入後可點選 Swagger 右上角 `Authorize`，貼上 `accessToken` 後測試需要登入的 API。
+
+開發診斷用 Controller 需標示 `DevelopmentOnlyControllerAttribute`。Production 或其他非 Development 環境會透過 MVC feature provider 排除這類 Controller，避免本機測試端點成為正式 API 攻擊面。
 
 ## 架構原則
 
