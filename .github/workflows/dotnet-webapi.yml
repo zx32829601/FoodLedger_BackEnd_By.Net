@@ -64,4 +64,4 @@ jobs:
         run: dotnet build FoodLedger.slnx --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test FoodLedger.Tests/FoodLedger.Tests.csproj --configuration Release --no-build }}\AppPackages
+        run: dotnet test FoodLedger.Tests/FoodLedger.Tests.csproj --configuration Release --no-build 
