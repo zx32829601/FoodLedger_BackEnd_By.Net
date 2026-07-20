@@ -4,3 +4,11 @@ GET {{FoodLedger_HostAddress}}/api/TestDb/check-connection
 Accept: application/json
 
 ###
+
+@AccessToken = 請貼上登入後取得的 accessToken
+
+GET {{FoodLedger_HostAddress}}/api/users/me
+Accept: application/json
+Authorization: Bearer {{AccessToken}}
+
+###
