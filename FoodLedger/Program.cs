@@ -1,6 +1,9 @@
 using FoodLedger.Data.Entities;
+using FoodLedger.Services;
+using FoodLedger.Swagger;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,13 +32,29 @@ builder.Services
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddApiEndpoints();
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer(); // 讓 Swagger 找到你的 API
-builder.Services.AddSwaggerGen();           // 生成 Swagger 規格
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "請輸入登入後取得的 Bearer token，不需要加上 Bearer 前綴。",
+    });
+
+    options.DocumentFilter<AuthorizeDocumentFilter>();
+});           // 生成 Swagger 規格
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var app = builder.Build();
 

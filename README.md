@@ -10,7 +10,9 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 
 - [x] 導入 ASP.NET Core Identity，使用 `ApplicationUser : IdentityUser<long>` 作為使用者模型。
 - [x] 不再使用早期自建帳號模型 `UserAccount`；既有 migration 已移除 legacy `user_account` 資料表，帳號、密碼、角色與授權統一交由 ASP.NET Core Identity 管理。
-- [ ] 建立 `ICurrentUserService`，讓 Service 層可取得目前登入使用者，不直接依賴 `HttpContext`。
+- [x] 建立 `ICurrentUserService`，讓 Service 層可取得目前登入使用者，不直接依賴 `HttpContext`。
+- [x] 新增 `GET /api/users/me`，讓登入使用者可查詢目前 request 解析出的使用者資訊。
+- [x] 設定 Swagger Bearer token 驗證輸入，方便在 Swagger UI 測試需要登入的 API。
 - [ ] 檢查 `DailyRecord.UserId` 與 `ApplicationUser.Id` 的關聯、索引與刪除行為。
 - [ ] 確認所有需要登入的 API 加上 `[Authorize]`。
 - [ ] 確認管理員 API 使用 `[Authorize(Roles = "Admin")]`。
@@ -26,7 +28,8 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 
 ### P2：測試與資料品質
 
-- [ ] 新增獨立測試專案 `FoodLedger.Tests`，使用 NUnit 4.x。
+- [x] 新增獨立測試專案 `FoodLedger.Tests`，使用 NUnit 4.x。
+- [x] 為 `ICurrentUserService` 與 `UsersController` 補上 NUnit 測試。
 - [ ] 為 Service 層補單元測試或接近整合測試的 EF Core InMemory 測試。
 - [ ] 補食物查詢、分類篩選、營養素換算、每日飲食紀錄與使用者資料隔離測試。
 - [ ] 補 API route、驗證與授權整合測試。
@@ -49,20 +52,27 @@ FoodLedger_BackEnd_By.Net/
 ├─ FoodLedger.slnx
 ├─ FoodLedger/
 │  ├─ Controllers/
+│  │  └─ UsersController.cs
 │  ├─ Data/
 │  │  ├─ ApplicationDbContext.cs
 │  │  ├─ Configurations/
 │  │  └─ Entities/
 │  ├─ DTOs/
+│  │  └─ Users/
 │  ├─ Migrations/
 │  ├─ Models/
 │  ├─ Services/
+│  │  ├─ CurrentUserService.cs
+│  │  └─ ICurrentUserService.cs
 │  ├─ Program.cs
 │  └─ Dockerfile
 ├─ FoodLedger.AppHost/
 │  └─ AppHost.cs
 ├─ FoodLedger.ServiceDefaults/
 │  └─ Extensions.cs
+├─ FoodLedger.Tests/
+│  ├─ Controllers/
+│  └─ Services/
 ├─ AGENTS.md
 └─ README.md
 ```
@@ -164,6 +174,17 @@ app.MapIdentityApi<ApplicationUser>();
 ```
 
 帳號、密碼雜湊、登入驗證、角色儲存與授權流程統一交由 ASP.NET Core Identity 管理。早期自建帳號資料表 `user_account` 已在既有 migration 中移除，後續不再作為帳號來源。
+
+Service 層若需要取得目前登入使用者，應透過 `ICurrentUserService` 取得 `UserId`、`UserName` 與登入狀態，不直接依賴 `HttpContext`。
+
+目前提供登入者資訊 API：
+
+```http
+GET /api/users/me
+Authorization: Bearer {accessToken}
+```
+
+Swagger UI 已設定 Bearer token 驗證輸入。登入後可點選 Swagger 右上角 `Authorize`，貼上 `accessToken` 後測試需要登入的 API。
 
 ## 架構原則
 
