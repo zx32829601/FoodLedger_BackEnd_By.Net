@@ -12,6 +12,36 @@ namespace FoodLedger.Tests.Controllers;
 public class DailyRecordsControllerTests
 {
     /// <summary>
+    /// 驗證新增飲食紀錄 request 有效時，Controller 會將同一份 request 與取消權杖交給 Service，並回傳 204 No Content。
+    /// </summary>
+    [Test]
+    public async Task Create_WhenRequestIsValid_CallsServiceAndReturnsNoContent()
+    {
+        // Arrange
+        var dailyRecordService = new RecordingDailyRecordService();
+        var controller = new DailyRecordsController(dailyRecordService);
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = DateTimeOffset.UtcNow,
+        };
+        using var cancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = cancellationTokenSource.Token;
+
+        // Act
+        var result = await controller.Create(request, cancellationToken);
+
+        // Assert
+        Assert.That(result, Is.TypeOf<NoContentResult>());
+        Assert.Multiple(() =>
+        {
+            Assert.That(dailyRecordService.ReceivedRequest, Is.SameAs(request));
+            Assert.That(dailyRecordService.ReceivedCancellationToken, Is.EqualTo(cancellationToken));
+        });
+    }
+
+    /// <summary>
     /// 驗證 Service 回報欄位超出允許範圍時，Controller 會轉成 400 ValidationProblem，避免例外外漏成 500。
     /// </summary>
     [Test]
@@ -39,6 +69,22 @@ public class DailyRecordsControllerTests
 
         var problemDetails = (ValidationProblemDetails)validationProblemResult.Value!;
         Assert.That(problemDetails.Errors, Contains.Key(nameof(CreateDailyRecordRequest.ConsumedAt)));
+    }
+
+    private sealed class RecordingDailyRecordService : IDailyRecordService
+    {
+        public CreateDailyRecordRequest? ReceivedRequest { get; private set; }
+
+        public CancellationToken ReceivedCancellationToken { get; private set; }
+
+        public Task CreateDailyRecordAsync(
+            CreateDailyRecordRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ReceivedRequest = request;
+            ReceivedCancellationToken = cancellationToken;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class ThrowingDailyRecordService : IDailyRecordService
