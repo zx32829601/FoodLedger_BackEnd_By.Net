@@ -39,6 +39,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 為 `DailyRecordService` 指定食物不存在時拒絕新增並避免寫入資料庫補上 Service 層測試。
 - [x] 為 `DailyRecordService` 用餐時間晚於目前 UTC 時拒絕新增並避免寫入資料庫補上 Service 層測試。
 - [x] 為 `DailyRecordService` 用餐時間等於目前 UTC 時允許新增補上邊界測試。
+- [x] 為 `DailyRecordService` 非 UTC offset 但實際時間點未晚於目前 UTC 時允許新增，並正規化為 UTC 儲存補上測試。
 - [ ] 為 Service 層補單元測試或接近整合測試的 EF Core InMemory 測試。
 - [ ] 補食物查詢、分類篩選、營養素換算、每日飲食紀錄與使用者資料隔離測試。
 - [ ] 補 API route、驗證與授權整合測試。
@@ -193,7 +194,7 @@ app.MapIdentityApi<ApplicationUser>();
 
 Service 層若需要取得目前登入使用者，應透過 `ICurrentUserService` 取得 `UserId`、`UserName` 與登入狀態，不直接依賴 `HttpContext`。
 
-Service 層若需要目前時間，應透過 .NET 內建 `TimeProvider` 取得 UTC 時間，讓時間相關商業規則可被固定時間測試。`DailyRecord` 代表已實際攝取的飲食紀錄，因此 `ConsumedAt` 可以等於目前 UTC 時間，但不可晚於目前 UTC 時間；預先規劃可能會吃的餐點應另以 `PlannedMeal` 或 `MealPlan` 功能建模。
+Service 層若需要目前時間，應透過 .NET 內建 `TimeProvider` 取得 UTC 時間，讓時間相關商業規則可被固定時間測試。`DailyRecord` 代表已實際攝取的飲食紀錄，因此 `ConsumedAt` 可以等於目前 UTC 時間，但不可晚於目前 UTC 時間；API 可接受非 UTC offset 的 `DateTimeOffset`，Service 判斷時以實際時間點比較，寫入時統一正規化為 UTC。預先規劃可能會吃的餐點應另以 `PlannedMeal` 或 `MealPlan` 功能建模。
 
 目前提供登入者資訊 API：
 

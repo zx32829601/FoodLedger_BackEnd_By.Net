@@ -61,7 +61,7 @@ public sealed class DailyRecordService : IDailyRecordService
             UserId = currentUserId,
             FoodId = request.FoodId,
             Quantity = request.Quantity,
-            ConsumedAt = request.ConsumedAt,
+            ConsumedAt = request.ConsumedAt.ToUniversalTime(),
         };
 
         _dbContext.DailyRecords.Add(dailyRecord);

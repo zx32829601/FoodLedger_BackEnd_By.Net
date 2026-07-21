@@ -177,6 +177,40 @@ public class DailyRecordServiceTests
         Assert.That(dailyRecord.ConsumedAt, Is.EqualTo(FixedUtcNow));
     }
 
+    /// <summary>
+    /// 驗證非 UTC offset 但實際時間點未晚於目前 UTC 時，Service 會允許新增並以 UTC 時間持久化。
+    /// </summary>
+    [Test]
+    public async Task CreateDailyRecordAsync_WhenConsumedAtHasNonUtcOffsetButInstantIsNotFuture_CreatesDailyRecordWithUtcConsumedAt()
+    {
+        // Arrange
+        var databaseName = CreateDatabaseName();
+        await using var dbContext = CreateDbContext(databaseName);
+        SeedSimpleFood(dbContext);
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+        var consumedAt = new DateTimeOffset(2026, 7, 21, 20, 0, 0, TimeSpan.FromHours(8));
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = consumedAt,
+        };
+
+        // Act
+        await service.CreateDailyRecordAsync(request);
+
+        // Assert
+        await using var verificationDbContext = CreateDbContext(databaseName);
+        var dailyRecord = await verificationDbContext.DailyRecords.SingleAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(dailyRecord.ConsumedAt, Is.EqualTo(consumedAt.ToUniversalTime()));
+            Assert.That(dailyRecord.ConsumedAt.Offset, Is.EqualTo(TimeSpan.Zero));
+        });
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
