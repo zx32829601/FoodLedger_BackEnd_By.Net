@@ -19,7 +19,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 
 ### P1：後端分層與核心功能
 
-- [ ] 建立 Service 層架構，避免 Controller 直接放商業邏輯。目前已建立 `DailyRecordService` 新增紀錄切片，支援未登入拒絕、使用目前登入者建立紀錄、拒絕 0 或負數份量紀錄，以及拒絕不存在的食物。
+- [ ] 建立 Service 層架構，避免 Controller 直接放商業邏輯。目前已建立 `DailyRecordService` 新增紀錄切片，支援未登入拒絕、使用目前登入者建立紀錄、拒絕 0 或負數份量紀錄、拒絕不存在的食物，以及拒絕未來時間紀錄。
 - [ ] 建立 Request / Response DTO，API response 不直接暴露 Entity。
 - [ ] 實作食物查詢 API，支援關鍵字、分類與語系查詢。
 - [ ] 實作每日飲食紀錄 API，支援新增、查詢、修改與刪除自己的紀錄。
@@ -37,6 +37,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 為 `DailyRecordService` 使用目前登入者建立飲食紀錄的成功路徑補上 Service 層測試。
 - [x] 為 `DailyRecordService` 餐點份量為 0 或負數時拒絕新增並避免寫入資料庫補上 Service 層測試。
 - [x] 為 `DailyRecordService` 指定食物不存在時拒絕新增並避免寫入資料庫補上 Service 層測試。
+- [x] 為 `DailyRecordService` 用餐時間晚於目前 UTC 時拒絕新增並避免寫入資料庫補上 Service 層測試。
 - [ ] 為 Service 層補單元測試或接近整合測試的 EF Core InMemory 測試。
 - [ ] 補食物查詢、分類篩選、營養素換算、每日飲食紀錄與使用者資料隔離測試。
 - [ ] 補 API route、驗證與授權整合測試。
@@ -190,6 +191,8 @@ app.MapIdentityApi<ApplicationUser>();
 帳號、密碼雜湊、登入驗證、角色儲存與授權流程統一交由 ASP.NET Core Identity 管理。早期自建帳號資料表 `user_account` 已在既有 migration 中移除，後續不再作為帳號來源。
 
 Service 層若需要取得目前登入使用者，應透過 `ICurrentUserService` 取得 `UserId`、`UserName` 與登入狀態，不直接依賴 `HttpContext`。
+
+Service 層若需要目前時間，應透過 .NET 內建 `TimeProvider` 取得 UTC 時間，讓時間相關商業規則可被固定時間測試。
 
 目前提供登入者資訊 API：
 

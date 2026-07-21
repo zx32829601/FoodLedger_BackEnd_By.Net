@@ -11,18 +11,22 @@ public sealed class DailyRecordService : IDailyRecordService
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// 建立每日飲食紀錄服務。
     /// </summary>
     /// <param name="dbContext">應用程式資料庫內容。</param>
     /// <param name="currentUserService">目前登入使用者資訊來源。</param>
+    /// <param name="timeProvider">目前 UTC 時間來源，用於驗證飲食紀錄時間不可晚於現在。</param>
     public DailyRecordService(
         ApplicationDbContext dbContext,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        TimeProvider timeProvider)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc />
@@ -38,6 +42,11 @@ public sealed class DailyRecordService : IDailyRecordService
         if (request.Quantity <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(request.Quantity));
+        }
+
+        if (request.ConsumedAt > _timeProvider.GetUtcNow())
+        {
+            throw new ArgumentOutOfRangeException(nameof(request.ConsumedAt));
         }
 
         var foodExists = await _dbContext.SimpleFoods

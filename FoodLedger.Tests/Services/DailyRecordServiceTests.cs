@@ -12,6 +12,7 @@ public class DailyRecordServiceTests
 {
     // 測試用固定目前使用者 ID，用來確認新增紀錄的擁有者來自後端登入狀態。
     private const long CurrentUserId = 42;
+    private static readonly DateTimeOffset FixedUtcNow = new(2026, 7, 21, 12, 0, 0, TimeSpan.Zero);
 
     /// <summary>
     /// 驗證目前使用者不存在時，新增每日飲食紀錄會被拒絕且不寫入資料庫。
@@ -22,12 +23,12 @@ public class DailyRecordServiceTests
         // Arrange
         await using var dbContext = CreateDbContext();
         var currentUserService = new TestCurrentUserService { UserId = null };
-        var service = new DailyRecordService(dbContext, currentUserService);
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
             Quantity = 1,
-            ConsumedAt = DateTimeOffset.UtcNow,
+            ConsumedAt = FixedUtcNow,
         };
 
         // Act & Assert
@@ -44,16 +45,12 @@ public class DailyRecordServiceTests
     {
         // Arrange
         var databaseName = CreateDatabaseName();
-        var consumedAt = DateTimeOffset.UtcNow;
+        var consumedAt = FixedUtcNow;
         await using var dbContext = CreateDbContext(databaseName);
-        dbContext.SimpleFoods.Add(new SimpleFood
-        {
-            FoodId = 1,
-            FoodCode = "TEST_FOOD",
-        });
+        SeedSimpleFood(dbContext);
         await dbContext.SaveChangesAsync();
         var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
-        var service = new DailyRecordService(dbContext, currentUserService);
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
@@ -87,12 +84,12 @@ public class DailyRecordServiceTests
         // Arrange
         await using var dbContext = CreateDbContext();
         var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
-        var service = new DailyRecordService(dbContext, currentUserService);
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
             Quantity = quantity,
-            ConsumedAt = DateTimeOffset.UtcNow,
+            ConsumedAt = FixedUtcNow,
         };
 
         // Act & Assert
@@ -111,17 +108,43 @@ public class DailyRecordServiceTests
         // Arrange
         await using var dbContext = CreateDbContext();
         var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
-        var service = new DailyRecordService(dbContext, currentUserService);
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
         var request = new CreateDailyRecordRequest
         {
             FoodId = 999,
             Quantity = 1,
-            ConsumedAt = DateTimeOffset.UtcNow,
+            ConsumedAt = FixedUtcNow,
         };
 
         // Act & Assert
         Assert.ThrowsAsync<KeyNotFoundException>(
             async () => await service.CreateDailyRecordAsync(request));
+        Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
+    }
+
+    /// <summary>
+    /// 驗證用餐時間晚於目前 UTC 時間時，Service 會拒絕新增並維持資料庫不被寫入。
+    /// </summary>
+    [Test]
+    public async Task CreateDailyRecordAsync_WhenConsumedAtIsInFuture_ThrowsArgumentOutOfRangeExceptionAndDoesNotWriteDatabase()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        SeedSimpleFood(dbContext);
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = FixedUtcNow.AddMinutes(1),
+        };
+
+        // Act & Assert
+        var exception = Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            async () => await service.CreateDailyRecordAsync(request));
+        Assert.That(exception?.ParamName, Is.EqualTo(nameof(CreateDailyRecordRequest.ConsumedAt)));
         Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
     }
 
@@ -139,6 +162,15 @@ public class DailyRecordServiceTests
         return $"DailyRecordServiceTests-{Guid.NewGuid()}";
     }
 
+    private static void SeedSimpleFood(ApplicationDbContext dbContext)
+    {
+        dbContext.SimpleFoods.Add(new SimpleFood
+        {
+            FoodId = 1,
+            FoodCode = "TEST_FOOD",
+        });
+    }
+
     private sealed class TestCurrentUserService : ICurrentUserService
     {
         public bool IsAuthenticated => UserId.HasValue;
@@ -146,5 +178,13 @@ public class DailyRecordServiceTests
         public long? UserId { get; init; }
 
         public string? UserName => null;
+    }
+
+    private sealed class TestTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow()
+        {
+            return utcNow;
+        }
     }
 }

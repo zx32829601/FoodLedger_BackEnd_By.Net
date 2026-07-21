@@ -35,6 +35,7 @@ builder.Services
     .AddApiEndpoints();
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IDailyRecordService, DailyRecordService>();
 
