@@ -1,4 +1,5 @@
 using FoodLedger.DTOs.DailyRecords;
+using FoodLedger.Data.Entities;
 
 namespace FoodLedger.Services;
 
@@ -24,15 +25,24 @@ public sealed class DailyRecordService : IDailyRecordService
     }
 
     /// <inheritdoc />
-    public Task CreateDailyRecordAsync(
+    public async Task CreateDailyRecordAsync(
         CreateDailyRecordRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (_currentUserService.UserId is null)
+        if (_currentUserService.UserId is not { } currentUserId)
         {
             throw new UnauthorizedAccessException();
         }
 
-        return Task.CompletedTask;
+        var dailyRecord = new DailyRecord
+        {
+            UserId = currentUserId,
+            FoodId = request.FoodId,
+            Quantity = request.Quantity,
+            ConsumedAt = request.ConsumedAt,
+        };
+
+        _dbContext.DailyRecords.Add(dailyRecord);
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }
