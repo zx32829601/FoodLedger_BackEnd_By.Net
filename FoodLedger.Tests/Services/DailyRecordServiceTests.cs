@@ -1,4 +1,5 @@
 using FoodLedger.DTOs.DailyRecords;
+using FoodLedger.Data.Entities;
 using FoodLedger.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,6 +46,12 @@ public class DailyRecordServiceTests
         var databaseName = CreateDatabaseName();
         var consumedAt = DateTimeOffset.UtcNow;
         await using var dbContext = CreateDbContext(databaseName);
+        dbContext.SimpleFoods.Add(new SimpleFood
+        {
+            FoodId = 1,
+            FoodCode = "TEST_FOOD",
+        });
+        await dbContext.SaveChangesAsync();
         var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
         var service = new DailyRecordService(dbContext, currentUserService);
         var request = new CreateDailyRecordRequest
@@ -92,6 +99,29 @@ public class DailyRecordServiceTests
         var exception = Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             async () => await service.CreateDailyRecordAsync(request));
         Assert.That(exception?.ParamName, Is.EqualTo(nameof(CreateDailyRecordRequest.Quantity)));
+        Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
+    }
+
+    /// <summary>
+    /// 驗證指定的食物不存在時，Service 會拒絕新增並維持資料庫不被寫入。
+    /// </summary>
+    [Test]
+    public async Task CreateDailyRecordAsync_WhenFoodDoesNotExist_ThrowsKeyNotFoundExceptionAndDoesNotWriteDatabase()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService);
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 999,
+            Quantity = 1,
+            ConsumedAt = DateTimeOffset.UtcNow,
+        };
+
+        // Act & Assert
+        Assert.ThrowsAsync<KeyNotFoundException>(
+            async () => await service.CreateDailyRecordAsync(request));
         Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
     }
 

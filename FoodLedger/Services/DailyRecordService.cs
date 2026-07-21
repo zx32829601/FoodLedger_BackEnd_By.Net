@@ -1,5 +1,6 @@
 using FoodLedger.DTOs.DailyRecords;
 using FoodLedger.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace FoodLedger.Services;
 
@@ -37,6 +38,13 @@ public sealed class DailyRecordService : IDailyRecordService
         if (request.Quantity <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(request.Quantity));
+        }
+
+        var foodExists = await _dbContext.SimpleFoods
+            .AnyAsync(food => food.FoodId == request.FoodId, cancellationToken);
+        if (!foodExists)
+        {
+            throw new KeyNotFoundException($"Food {request.FoodId} does not exist.");
         }
 
         var dailyRecord = new DailyRecord
