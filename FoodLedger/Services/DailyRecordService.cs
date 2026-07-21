@@ -34,6 +34,11 @@ public sealed class DailyRecordService : IDailyRecordService
             throw new UnauthorizedAccessException();
         }
 
+        if (request.Quantity <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request.Quantity));
+        }
+
         var dailyRecord = new DailyRecord
         {
             UserId = currentUserId,

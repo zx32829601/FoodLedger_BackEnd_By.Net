@@ -69,6 +69,29 @@ public class DailyRecordServiceTests
         });
     }
 
+    /// <summary>
+    /// 驗證餐點份量為 0 時，Service 會拒絕新增並維持資料庫不被寫入。
+    /// </summary>
+    [Test]
+    public async Task CreateDailyRecordAsync_WhenQuantityIsZero_ThrowsArgumentOutOfRangeExceptionAndDoesNotWriteDatabase()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService);
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 0,
+            ConsumedAt = DateTimeOffset.UtcNow,
+        };
+
+        // Act & Assert
+        Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            async () => await service.CreateDailyRecordAsync(request));
+        Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
