@@ -89,8 +89,9 @@ public class DailyRecordServiceTests
         };
 
         // Act & Assert
-        Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+        var exception = Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             async () => await service.CreateDailyRecordAsync(request));
+        Assert.That(exception?.ParamName, Is.EqualTo(nameof(CreateDailyRecordRequest.Quantity)));
         Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
     }
 
