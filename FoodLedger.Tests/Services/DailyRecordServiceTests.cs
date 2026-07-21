@@ -148,6 +148,35 @@ public class DailyRecordServiceTests
         Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
     }
 
+    /// <summary>
+    /// 驗證用餐時間等於目前 UTC 時間時，Service 會允許新增並持久化飲食紀錄。
+    /// </summary>
+    [Test]
+    public async Task CreateDailyRecordAsync_WhenConsumedAtEqualsCurrentUtcTime_CreatesDailyRecord()
+    {
+        // Arrange
+        var databaseName = CreateDatabaseName();
+        await using var dbContext = CreateDbContext(databaseName);
+        SeedSimpleFood(dbContext);
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = FixedUtcNow,
+        };
+
+        // Act
+        await service.CreateDailyRecordAsync(request);
+
+        // Assert
+        await using var verificationDbContext = CreateDbContext(databaseName);
+        var dailyRecord = await verificationDbContext.DailyRecords.SingleAsync();
+        Assert.That(dailyRecord.ConsumedAt, Is.EqualTo(FixedUtcNow));
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
