@@ -211,6 +211,32 @@ public class DailyRecordServiceTests
         });
     }
 
+    /// <summary>
+    /// 驗證非 UTC offset 且實際時間點晚於目前 UTC 時，Service 會拒絕新增並維持資料庫不被寫入。
+    /// </summary>
+    [Test]
+    public async Task CreateDailyRecordAsync_WhenConsumedAtHasNonUtcOffsetAndInstantIsFuture_ThrowsArgumentOutOfRangeExceptionAndDoesNotWriteDatabase()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        SeedSimpleFood(dbContext);
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = new DateTimeOffset(2026, 7, 21, 20, 1, 0, TimeSpan.FromHours(8)),
+        };
+
+        // Act & Assert
+        var exception = Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            async () => await service.CreateDailyRecordAsync(request));
+        Assert.That(exception?.ParamName, Is.EqualTo(nameof(CreateDailyRecordRequest.ConsumedAt)));
+        Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
