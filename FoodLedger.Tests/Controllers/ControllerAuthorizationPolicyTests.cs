@@ -1,9 +1,13 @@
 using FoodLedger.Controllers;
 using FoodLedger.Infrastructure.Mvc;
+using FoodLedger.Security;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System.Reflection;
 
 namespace FoodLedger.Tests.Controllers;
@@ -95,10 +99,82 @@ public class ControllerAuthorizationPolicyTests
         Assert.That(feature.Controllers, Does.Contain(typeof(TestDbController).GetTypeInfo()));
     }
 
+    /// <summary>
+    /// 驗證管理員角色常數維持為 ASP.NET Core Identity 使用的角色名稱，避免授權設定分散硬編碼。
+    /// </summary>
+    [Test]
+    public void ApplicationRoles_Admin_HasExpectedRoleName()
+    {
+        // Act
+        var adminRole = ApplicationRoles.Admin;
+
+        // Assert
+        Assert.That(adminRole, Is.EqualTo("Admin"));
+    }
+
+    /// <summary>
+    /// 驗證管理員授權 policy 已要求 Admin 角色，供未來管理員 API 統一套用。
+    /// </summary>
+    [Test]
+    public void AddApplicationAuthorization_WhenConfigured_RegistersAdminOnlyPolicy()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddApplicationAuthorization();
+        using var serviceProvider = services.BuildServiceProvider();
+        var authorizationOptions = serviceProvider.GetRequiredService<IOptions<AuthorizationOptions>>().Value;
+
+        // Act
+        var adminPolicy = authorizationOptions.GetPolicy(AuthorizationPolicyNames.AdminOnly);
+
+        // Assert
+        Assert.That(adminPolicy, Is.Not.Null);
+        Assert.That(
+            adminPolicy!.Requirements.OfType<RolesAuthorizationRequirement>().Single().AllowedRoles,
+            Does.Contain(ApplicationRoles.Admin));
+    }
+
+    /// <summary>
+    /// 驗證未來所有以 AdminController 結尾的 Controller 都必須限制 Admin 角色或套用 AdminOnly policy。
+    /// </summary>
+    [Test]
+    public void AdminControllers_WhenDiscovered_RequireAdminAuthorization()
+    {
+        // Arrange
+        var adminControllerTypes = typeof(UsersController).Assembly
+            .GetTypes()
+            .Where(type => type is { IsAbstract: false, IsClass: true })
+            .Where(type => typeof(ControllerBase).IsAssignableFrom(type))
+            .Where(type => type.Name.EndsWith("AdminController", StringComparison.Ordinal))
+            .ToArray();
+
+        // Act
+        var controllersWithoutAdminAuthorization = adminControllerTypes
+            .Where(type => !HasAdminAuthorization(type))
+            .Select(type => type.Name)
+            .ToArray();
+
+        // Assert
+        Assert.That(controllersWithoutAdminAuthorization, Is.Empty);
+    }
+
     private static bool HasAuthorizationBoundary(Type controllerType)
     {
         return controllerType.IsDefined(typeof(AuthorizeAttribute), inherit: false)
             || controllerType.IsDefined(typeof(AllowAnonymousAttribute), inherit: false)
             || controllerType.IsDefined(typeof(DevelopmentOnlyControllerAttribute), inherit: false);
+    }
+
+    private static bool HasAdminAuthorization(Type controllerType)
+    {
+        var authorizeAttributes = controllerType
+            .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: false)
+            .Cast<AuthorizeAttribute>();
+
+        return authorizeAttributes.Any(attribute =>
+            attribute.Roles?
+                .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Contains(ApplicationRoles.Admin, StringComparer.Ordinal) == true
+            || attribute.Policy == AuthorizationPolicyNames.AdminOnly);
     }
 }
