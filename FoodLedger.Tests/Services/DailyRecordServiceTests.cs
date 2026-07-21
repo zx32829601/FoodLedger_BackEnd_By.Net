@@ -70,10 +70,12 @@ public class DailyRecordServiceTests
     }
 
     /// <summary>
-    /// 驗證餐點份量為 0 時，Service 會拒絕新增並維持資料庫不被寫入。
+    /// 驗證餐點份量為 0 或負數時，Service 會拒絕新增並維持資料庫不被寫入。
     /// </summary>
-    [Test]
-    public async Task CreateDailyRecordAsync_WhenQuantityIsZero_ThrowsArgumentOutOfRangeExceptionAndDoesNotWriteDatabase()
+    [TestCase(0)]
+    [TestCase(-1)]
+    public async Task CreateDailyRecordAsync_WhenQuantityIsZeroOrNegative_ThrowsArgumentOutOfRangeExceptionAndDoesNotWriteDatabase(
+        decimal quantity)
     {
         // Arrange
         await using var dbContext = CreateDbContext();
@@ -82,7 +84,7 @@ public class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 0,
+            Quantity = quantity,
             ConsumedAt = DateTimeOffset.UtcNow,
         };
 
