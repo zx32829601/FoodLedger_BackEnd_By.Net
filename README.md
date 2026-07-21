@@ -15,7 +15,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 設定 Swagger Bearer token 驗證輸入，方便在 Swagger UI 測試需要登入的 API。
 - [x] 檢查 `DailyRecord.UserId` 與 `ApplicationUser.Id` 的關聯、索引與刪除行為，並以模型測試固定 FK、`Restrict` 與 `UserId + ConsumedAt` 複合索引。
 - [x] 確認所有需要登入的 API 加上 `[Authorize]`，並讓開發診斷用 Controller 僅在 Development 環境註冊。
-- [ ] 確認管理員 API 使用 `[Authorize(Roles = "Admin")]`。
+- [x] 建立管理員授權規範與測試，未來管理員 API 必須套用 Admin role 或 Admin policy。
 
 ### P1：後端分層與核心功能
 
@@ -32,6 +32,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 為 `ICurrentUserService` 與 `UsersController` 補上 NUnit 測試。
 - [x] 為 `DailyRecord.UserId` 與 `ApplicationUser.Id` 的模型關聯、刪除行為與查詢索引補上 NUnit 測試。
 - [x] 為 Controller 授權邊界與 Development-only Controller 註冊規則補上 NUnit 測試。
+- [x] 為管理員授權角色、policy 與 `*AdminController` 防回歸規則補上 NUnit 測試。
 - [ ] 為 Service 層補單元測試或接近整合測試的 EF Core InMemory 測試。
 - [ ] 補食物查詢、分類篩選、營養素換算、每日飲食紀錄與使用者資料隔離測試。
 - [ ] 補 API route、驗證與授權整合測試。
@@ -65,6 +66,7 @@ FoodLedger_BackEnd_By.Net/
 │  ├─ Models/
 │  ├─ Infrastructure/
 │  │  └─ Mvc/
+│  ├─ Security/
 │  ├─ Services/
 │  │  ├─ CurrentUserService.cs
 │  │  └─ ICurrentUserService.cs
@@ -193,6 +195,8 @@ Swagger UI 已設定 Bearer token 驗證輸入。登入後可點選 Swagger 右�
 
 開發診斷用 Controller 需標示 `DevelopmentOnlyControllerAttribute`。Production 或其他非 Development 環境會透過 MVC feature provider 排除這類 Controller，避免本機測試端點成為正式 API 攻擊面。
 
+管理員授權統一使用 `ApplicationRoles.Admin` 與 `AuthorizationPolicyNames.AdminOnly`。未來新增 `*AdminController` 時，必須套用 Admin role 或 Admin policy，避免管理功能只登入即可操作。
+
 ## 架構原則
 
 - Controller 只負責 HTTP request / response、驗證與授權。
@@ -201,7 +205,7 @@ Swagger UI 已設定 Bearer token 驗證輸入。登入後可點選 Swagger 右�
 - 資料庫 I/O 優先使用 EF Core async API。
 - API response 使用 DTO / Response model，不直接暴露 Entity。
 - 需要登入的 API 必須加上 `[Authorize]`。
-- 管理員 API 必須加上 role-based authorization。
+- 管理員 API 必須加上 Admin role 或 Admin policy。
 - 使用者只能操作自己的 `DailyRecord`，不得信任前端傳入的 `UserId`。
 - 時間欄位統一使用 UTC。
 

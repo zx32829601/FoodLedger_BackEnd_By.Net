@@ -1,5 +1,6 @@
 using FoodLedger.Data.Entities;
 using FoodLedger.Infrastructure.Mvc;
+using FoodLedger.Security;
 using FoodLedger.Services;
 using FoodLedger.Swagger;
 using Microsoft.AspNetCore.Identity;
@@ -36,7 +37,7 @@ builder.Services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-builder.Services.AddAuthorization();
+builder.Services.AddApplicationAuthorization();
 
 builder.Services.AddControllers()
     .ConfigureApplicationPartManager(partManager =>
