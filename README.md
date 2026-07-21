@@ -19,7 +19,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 
 ### P1：後端分層與核心功能
 
-- [ ] 建立 Service 層架構，避免 Controller 直接放商業邏輯。
+- [ ] 建立 Service 層架構，避免 Controller 直接放商業邏輯。目前已建立 `DailyRecordService` 第一個切片，未登入時拒絕新增飲食紀錄。
 - [ ] 建立 Request / Response DTO，API response 不直接暴露 Entity。
 - [ ] 實作食物查詢 API，支援關鍵字、分類與語系查詢。
 - [ ] 實作每日飲食紀錄 API，支援新增、查詢、修改與刪除自己的紀錄。
@@ -33,6 +33,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 為 `DailyRecord.UserId` 與 `ApplicationUser.Id` 的模型關聯、刪除行為與查詢索引補上 NUnit 測試。
 - [x] 為 Controller 授權邊界與 Development-only Controller 註冊規則補上 NUnit 測試。
 - [x] 為管理員授權角色、policy 與 `*AdminController` 防回歸規則補上 NUnit 測試。
+- [x] 為 `DailyRecordService` 未登入新增飲食紀錄的拒絕行為補上第一個 Service 層測試。
 - [ ] 為 Service 層補單元測試或接近整合測試的 EF Core InMemory 測試。
 - [ ] 補食物查詢、分類篩選、營養素換算、每日飲食紀錄與使用者資料隔離測試。
 - [ ] 補 API route、驗證與授權整合測試。
@@ -61,6 +62,7 @@ FoodLedger_BackEnd_By.Net/
 │  │  ├─ Configurations/
 │  │  └─ Entities/
 │  ├─ DTOs/
+│  │  ├─ DailyRecords/
 │  │  └─ Users/
 │  ├─ Migrations/
 │  ├─ Models/
@@ -69,6 +71,8 @@ FoodLedger_BackEnd_By.Net/
 │  ├─ Security/
 │  ├─ Services/
 │  │  ├─ CurrentUserService.cs
+│  │  ├─ DailyRecordService.cs
+│  │  ├─ IDailyRecordService.cs
 │  │  └─ ICurrentUserService.cs
 │  ├─ Program.cs
 │  └─ Dockerfile

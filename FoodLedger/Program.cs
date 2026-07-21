@@ -36,6 +36,7 @@ builder.Services
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IDailyRecordService, DailyRecordService>();
 
 builder.Services.AddApplicationAuthorization();
 

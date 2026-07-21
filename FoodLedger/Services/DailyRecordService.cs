@@ -1,0 +1,38 @@
+using FoodLedger.DTOs.DailyRecords;
+
+namespace FoodLedger.Services;
+
+/// <summary>
+/// 實作每日飲食紀錄相關商業邏輯。
+/// </summary>
+public sealed class DailyRecordService : IDailyRecordService
+{
+    private readonly ApplicationDbContext _dbContext;
+    private readonly ICurrentUserService _currentUserService;
+
+    /// <summary>
+    /// 建立每日飲食紀錄服務。
+    /// </summary>
+    /// <param name="dbContext">應用程式資料庫內容。</param>
+    /// <param name="currentUserService">目前登入使用者資訊來源。</param>
+    public DailyRecordService(
+        ApplicationDbContext dbContext,
+        ICurrentUserService currentUserService)
+    {
+        _dbContext = dbContext;
+        _currentUserService = currentUserService;
+    }
+
+    /// <inheritdoc />
+    public Task CreateDailyRecordAsync(
+        CreateDailyRecordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (_currentUserService.UserId is null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        return Task.CompletedTask;
+    }
+}
