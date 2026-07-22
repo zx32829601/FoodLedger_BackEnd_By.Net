@@ -45,6 +45,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 為 `DailyRecordsController` 成功新增時呼叫 Service 並回傳 204 No Content 補上 Controller 測試。
 - [x] 為 `DailyRecordsController` 處理 Service 資源不存在錯誤並回傳 404 Not Found 補上 Controller 測試。
 - [x] 為 `DailyRecordsController` 處理 Service 未授權錯誤並回傳 401 Unauthorized 補上 Controller 測試。
+- [x] 為 `POST /api/daily-records` 未登入 request 會被授權 middleware 擋下並回傳 401 Unauthorized 補上 API 整合測試。
 - [ ] 為 Service 層補單元測試或接近整合測試的 EF Core InMemory 測試。
 - [ ] 補食物查詢、分類篩選、營養素換算、每日飲食紀錄與使用者資料隔離測試。
 - [ ] 補 API route、驗證與授權整合測試。

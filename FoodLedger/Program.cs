@@ -86,3 +86,8 @@ app.MapIdentityApi<ApplicationUser>();
 app.MapControllers();
 
 app.Run();
+
+/// <summary>
+/// 讓 API 整合測試可透過 <c>WebApplicationFactory</c> 載入 top-level statements 建立的應用程式進入點。
+/// </summary>
+public partial class Program;
