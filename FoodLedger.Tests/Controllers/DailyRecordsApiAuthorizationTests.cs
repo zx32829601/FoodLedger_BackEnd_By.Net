@@ -1,13 +1,19 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text.Encodings.Web;
 using FoodLedger.Data.Entities;
 using FoodLedger.DTOs.DailyRecords;
 using FoodLedger.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace FoodLedger.Tests.Controllers;
 
@@ -16,6 +22,9 @@ namespace FoodLedger.Tests.Controllers;
 /// </summary>
 public class DailyRecordsApiAuthorizationTests
 {
+    // 測試用驗證 scheme，僅在 WebApplicationFactory 內註冊，避免依賴真實 JWT / Identity token。
+    private const string TestAuthenticationScheme = "Test";
+
     /// <summary>
     /// 驗證未登入 request 呼叫新增每日飲食紀錄 API 時，會被 Authorize middleware 擋下並回傳 401 Unauthorized。
     /// </summary>
@@ -25,7 +34,7 @@ public class DailyRecordsApiAuthorizationTests
         // Arrange
         await using var factory = new DailyRecordsApiFactory();
         using var client = factory.CreateClient();
-        var dailyRecordService = factory.Services.GetRequiredService<BlockingDailyRecordService>();
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
         var request = new
         {
             FoodId = 1,
@@ -44,6 +53,41 @@ public class DailyRecordsApiAuthorizationTests
         });
     }
 
+    /// <summary>
+    /// 驗證已通過驗證的 request 呼叫新增每日飲食紀錄 API 時，會進入 Service 並回傳 204 No Content。
+    /// </summary>
+    [Test]
+    public async Task Create_WhenRequestIsAuthenticated_CallsServiceAndReturnsNoContent()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        var consumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero);
+        var request = new
+        {
+            FoodId = 1,
+            Quantity = 1.5m,
+            ConsumedAt = consumedAt,
+        };
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/daily-records", request);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            Assert.That(dailyRecordService.CallCount, Is.EqualTo(1));
+            Assert.That(dailyRecordService.ReceivedRequest?.FoodId, Is.EqualTo(request.FoodId));
+            Assert.That(dailyRecordService.ReceivedRequest?.Quantity, Is.EqualTo(request.Quantity));
+            Assert.That(dailyRecordService.ReceivedRequest?.ConsumedAt, Is.EqualTo(consumedAt));
+        });
+    }
+
     private sealed class DailyRecordsApiFactory : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -53,25 +97,72 @@ public class DailyRecordsApiAuthorizationTests
             {
                 services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
                 services.RemoveAll<IDailyRecordService>();
+                services
+                    .AddAuthentication(options =>
+                    {
+                        options.DefaultAuthenticateScheme = TestAuthenticationScheme;
+                        options.DefaultChallengeScheme = TestAuthenticationScheme;
+                    })
+                    .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                        TestAuthenticationScheme,
+                        options => { });
                 services.AddDbContext<ApplicationDbContext>(options =>
                     options.UseInMemoryDatabase($"DailyRecordsApiAuthorizationTests-{Guid.NewGuid()}"));
-                services.AddSingleton<BlockingDailyRecordService>();
+                services.AddSingleton<RecordingDailyRecordService>();
                 services.AddSingleton<IDailyRecordService>(serviceProvider =>
-                    serviceProvider.GetRequiredService<BlockingDailyRecordService>());
+                    serviceProvider.GetRequiredService<RecordingDailyRecordService>());
             });
         }
     }
 
-    private sealed class BlockingDailyRecordService : IDailyRecordService
+    private sealed class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {
+        public TestAuthenticationHandler(
+            IOptionsMonitor<AuthenticationSchemeOptions> options,
+            ILoggerFactory logger,
+            UrlEncoder encoder)
+            : base(options, logger, encoder)
+        {
+        }
+
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            if (!Request.Headers.Authorization.Any(header =>
+                    AuthenticationHeaderValue.TryParse(header, out var authenticationHeader)
+                    && authenticationHeader.Scheme == TestAuthenticationScheme))
+            {
+                return Task.FromResult(AuthenticateResult.NoResult());
+            }
+
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, "42"),
+                new Claim(ClaimTypes.Name, "food-ledger-test-user"),
+            };
+            var identity = new ClaimsIdentity(claims, TestAuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+            var ticket = new AuthenticationTicket(principal, TestAuthenticationScheme);
+
+            return Task.FromResult(AuthenticateResult.Success(ticket));
+        }
+    }
+
+    private sealed class RecordingDailyRecordService : IDailyRecordService
+    {
+        public int CallCount { get; private set; }
+
         public bool WasCalled { get; private set; }
+
+        public CreateDailyRecordRequest? ReceivedRequest { get; private set; }
 
         public Task CreateDailyRecordAsync(
             CreateDailyRecordRequest request,
             CancellationToken cancellationToken = default)
         {
+            CallCount++;
             WasCalled = true;
-            throw new InvalidOperationException("匿名 request 不應進入每日飲食紀錄 Service。");
+            ReceivedRequest = request;
+            return Task.CompletedTask;
         }
     }
 }
