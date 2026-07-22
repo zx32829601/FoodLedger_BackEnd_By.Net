@@ -9,6 +9,8 @@ namespace FoodLedger.Services;
 /// </summary>
 public sealed class DailyRecordService : IDailyRecordService
 {
+    private const decimal MaximumQuantity = 10000m;
+
     private readonly ApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
     private readonly TimeProvider _timeProvider;
@@ -40,6 +42,11 @@ public sealed class DailyRecordService : IDailyRecordService
         }
 
         if (request.Quantity <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request.Quantity));
+        }
+
+        if (request.Quantity > MaximumQuantity)
         {
             throw new ArgumentOutOfRangeException(nameof(request.Quantity));
         }

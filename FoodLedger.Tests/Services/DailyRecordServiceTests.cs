@@ -100,6 +100,32 @@ public class DailyRecordServiceTests
     }
 
     /// <summary>
+    /// 驗證餐點份量超過業務上限時，Service 會拒絕新增並維持資料庫不被寫入。
+    /// </summary>
+    [Test]
+    public async Task CreateDailyRecordAsync_WhenQuantityExceedsBusinessMaximum_ThrowsArgumentOutOfRangeExceptionAndDoesNotWriteDatabase()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        SeedSimpleFood(dbContext);
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 10000.001m,
+            ConsumedAt = FixedUtcNow,
+        };
+
+        // Act & Assert
+        var exception = Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            async () => await service.CreateDailyRecordAsync(request));
+        Assert.That(exception?.ParamName, Is.EqualTo(nameof(CreateDailyRecordRequest.Quantity)));
+        Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
+    }
+
+    /// <summary>
     /// 驗證指定的食物不存在時，Service 會拒絕新增並維持資料庫不被寫入。
     /// </summary>
     [Test]
