@@ -71,6 +71,10 @@ public sealed class DailyRecordsController : ControllerBase
                 statusCode: StatusCodes.Status400BadRequest,
                 modelStateDictionary: ModelState);
         }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
 
         return NoContent();
     }

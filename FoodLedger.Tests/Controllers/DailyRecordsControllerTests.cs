@@ -71,6 +71,29 @@ public class DailyRecordsControllerTests
         Assert.That(problemDetails.Errors, Contains.Key(nameof(CreateDailyRecordRequest.ConsumedAt)));
     }
 
+    /// <summary>
+    /// 驗證 Service 回報指定資源不存在時，Controller 會轉成 404 Not Found，避免例外外漏成 500。
+    /// </summary>
+    [Test]
+    public async Task Create_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
+    {
+        // Arrange
+        var dailyRecordService = new ThrowingDailyRecordService(new KeyNotFoundException("Food 999 does not exist."));
+        var controller = new DailyRecordsController(dailyRecordService);
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 999,
+            Quantity = 1,
+            ConsumedAt = DateTimeOffset.UtcNow,
+        };
+
+        // Act
+        var result = await controller.Create(request, CancellationToken.None);
+
+        // Assert
+        Assert.That(result, Is.InstanceOf<NotFoundResult>());
+    }
+
     private sealed class RecordingDailyRecordService : IDailyRecordService
     {
         public CreateDailyRecordRequest? ReceivedRequest { get; private set; }
