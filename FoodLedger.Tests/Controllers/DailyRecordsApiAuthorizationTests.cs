@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using FoodLedger.Data.Entities;
 using FoodLedger.DTOs.DailyRecords;
 using FoodLedger.Services;
@@ -115,6 +116,42 @@ public class DailyRecordsApiAuthorizationTests
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(dailyRecordService.WasCalled, Is.False);
+        });
+    }
+
+    /// <summary>
+    /// 驗證食用數量為 0 的驗證錯誤內容會包含 Quantity 欄位，讓呼叫端可對應欄位錯誤。
+    /// </summary>
+    [Test]
+    public async Task Create_WhenQuantityIsZero_ReturnsValidationProblemWithQuantityError()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        var request = new
+        {
+            FoodId = 1,
+            Quantity = 0,
+            ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
+        };
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/daily-records", request);
+
+        // Assert
+        await using var responseStream = await response.Content.ReadAsStreamAsync();
+        using var problemDetails = await JsonDocument.ParseAsync(responseStream);
+        var errors = problemDetails.RootElement.GetProperty("errors");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(errors.TryGetProperty(nameof(CreateDailyRecordRequest.Quantity), out _), Is.True);
             Assert.That(dailyRecordService.WasCalled, Is.False);
         });
     }
