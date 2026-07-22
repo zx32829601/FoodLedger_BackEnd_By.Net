@@ -126,6 +126,39 @@ public class DailyRecordServiceTests
     }
 
     /// <summary>
+    /// 驗證餐點份量等於業務上限時，Service 會允許新增並持久化飲食紀錄。
+    /// </summary>
+    [Test]
+    public async Task CreateDailyRecordAsync_WhenQuantityEqualsBusinessMaximum_CreatesDailyRecord()
+    {
+        // Arrange
+        var databaseName = CreateDatabaseName();
+        await using var dbContext = CreateDbContext(databaseName);
+        SeedSimpleFood(dbContext);
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 10000m,
+            ConsumedAt = FixedUtcNow,
+        };
+
+        // Act
+        await service.CreateDailyRecordAsync(request);
+
+        // Assert
+        await using var verificationDbContext = CreateDbContext(databaseName);
+        var dailyRecord = await verificationDbContext.DailyRecords.SingleAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(dailyRecord.UserId, Is.EqualTo(CurrentUserId));
+            Assert.That(dailyRecord.Quantity, Is.EqualTo(request.Quantity));
+        });
+    }
+
+    /// <summary>
     /// 驗證指定的食物不存在時，Service 會拒絕新增並維持資料庫不被寫入。
     /// </summary>
     [Test]

@@ -42,6 +42,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 為 `DailyRecordService` 非 UTC offset 但實際時間點未晚於目前 UTC 時允許新增，並正規化為 UTC 儲存補上測試。
 - [x] 為 `DailyRecordService` 非 UTC offset 但實際時間點晚於目前 UTC 時拒絕新增補上測試。
 - [x] 為 `DailyRecordService` 餐點份量超過業務上限 `10000` 時拒絕新增並避免寫入資料庫補上 Service 層測試。
+- [x] 為 `DailyRecordService` 餐點份量等於業務上限 `10000` 時允許新增補上 Service 層邊界測試。
 - [x] 為 `DailyRecordsController` 處理 Service 欄位範圍錯誤並回傳 400 ValidationProblem 補上 Controller 測試。
 - [x] 為 `DailyRecordsController` 成功新增時呼叫 Service 並回傳 204 No Content 補上 Controller 測試。
 - [x] 為 `DailyRecordsController` 處理 Service 資源不存在錯誤並回傳 404 Not Found 補上 Controller 測試。
