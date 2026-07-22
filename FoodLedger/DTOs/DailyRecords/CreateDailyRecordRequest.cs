@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace FoodLedger.DTOs.DailyRecords;
 
 /// <summary>
@@ -8,6 +10,10 @@ namespace FoodLedger.DTOs.DailyRecords;
 /// </remarks>
 public sealed class CreateDailyRecordRequest
 {
+    private const string MinimumQuantity = "0.001";
+
+    private const string MaximumQuantity = "9999999.999";
+
     /// <summary>
     /// 食物資料識別碼。
     /// </summary>
@@ -16,6 +22,10 @@ public sealed class CreateDailyRecordRequest
     /// <summary>
     /// 食用數量。
     /// </summary>
+    /// <remarks>
+    /// 數量必須大於 0，避免建立沒有實際攝取量的飲食紀錄。
+    /// </remarks>
+    [Range(typeof(decimal), MinimumQuantity, MaximumQuantity)]
     public decimal Quantity { get; init; }
 
     /// <summary>
