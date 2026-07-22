@@ -94,6 +94,29 @@ public class DailyRecordsControllerTests
         Assert.That(result, Is.InstanceOf<NotFoundResult>());
     }
 
+    /// <summary>
+    /// 驗證 Service 回報目前 request 沒有可用的登入使用者時，Controller 會轉成 401 Unauthorized。
+    /// </summary>
+    [Test]
+    public async Task Create_WhenServiceThrowsUnauthorizedAccessException_ReturnsUnauthorized()
+    {
+        // Arrange
+        var dailyRecordService = new ThrowingDailyRecordService(new UnauthorizedAccessException());
+        var controller = new DailyRecordsController(dailyRecordService);
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = DateTimeOffset.UtcNow,
+        };
+
+        // Act
+        var result = await controller.Create(request, CancellationToken.None);
+
+        // Assert
+        Assert.That(result, Is.TypeOf<UnauthorizedResult>());
+    }
+
     private sealed class RecordingDailyRecordService : IDailyRecordService
     {
         public CreateDailyRecordRequest? ReceivedRequest { get; private set; }

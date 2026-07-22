@@ -75,6 +75,10 @@ public sealed class DailyRecordsController : ControllerBase
         {
             return NotFound();
         }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
 
         return NoContent();
     }
