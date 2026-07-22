@@ -50,6 +50,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 為 `POST /api/daily-records` 食用數量為 0 時由 API model validation 回傳 400 並避免進入 Service 補上整合測試。
 - [x] 為 `POST /api/daily-records` 食用數量為負數時由 API model validation 回傳 400 並避免進入 Service 補上整合測試。
 - [x] 為 `POST /api/daily-records` 食用數量超過資料庫欄位上限時由 API model validation 回傳 400 並避免進入 Service 補上整合測試。
+- [x] 為 `POST /api/daily-records` 食用數量等於資料庫欄位最大合法值時可通過 API model validation 並呼叫 Service 補上整合測試。
 - [ ] 為 Service 層補單元測試或接近整合測試的 EF Core InMemory 測試。
 - [ ] 補食物查詢、分類篩選、營養素換算、每日飲食紀錄與使用者資料隔離測試。
 - [ ] 補 API route、驗證與授權整合測試。

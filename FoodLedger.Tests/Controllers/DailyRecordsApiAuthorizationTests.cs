@@ -181,6 +181,39 @@ public class DailyRecordsApiAuthorizationTests
         });
     }
 
+    /// <summary>
+    /// 驗證每日飲食紀錄 API 收到最大合法食用量時，應通過模型驗證並交由 Service 處理。
+    /// </summary>
+    [Test]
+    public async Task Create_WhenQuantityIsMaximumAllowedValue_CallsServiceAndReturnsNoContent()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        var consumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero);
+        var request = new
+        {
+            FoodId = 1,
+            Quantity = 9999999.999m,
+            ConsumedAt = consumedAt,
+        };
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/daily-records", request);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            Assert.That(dailyRecordService.CallCount, Is.EqualTo(1));
+            Assert.That(dailyRecordService.ReceivedRequest?.Quantity, Is.EqualTo(request.Quantity));
+        });
+    }
+
     private sealed class DailyRecordsApiFactory : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
