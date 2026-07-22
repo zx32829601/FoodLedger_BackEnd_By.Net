@@ -157,6 +157,45 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
+    /// 驗證食用數量為 0 的 Quantity 欄位錯誤會以非空陣列回傳，讓呼叫端可安全渲染錯誤清單。
+    /// </summary>
+    [Test]
+    public async Task Create_WhenQuantityIsZero_ReturnsNonEmptyQuantityErrorsArray()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        var request = new
+        {
+            FoodId = 1,
+            Quantity = 0,
+            ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
+        };
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/daily-records", request);
+
+        // Assert
+        await using var responseStream = await response.Content.ReadAsStreamAsync();
+        using var problemDetails = await JsonDocument.ParseAsync(responseStream);
+        var quantityErrors = problemDetails.RootElement
+            .GetProperty("errors")
+            .GetProperty(nameof(CreateDailyRecordRequest.Quantity));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(quantityErrors.ValueKind, Is.EqualTo(JsonValueKind.Array));
+            Assert.That(quantityErrors.GetArrayLength(), Is.GreaterThan(0));
+            Assert.That(dailyRecordService.WasCalled, Is.False);
+        });
+    }
+
+    /// <summary>
     /// 驗證已驗證 request 的食用數量為負數時，API 會由模型驗證回傳 400 且不進入 Service。
     /// </summary>
     [Test]
