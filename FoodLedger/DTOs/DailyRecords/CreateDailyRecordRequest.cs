@@ -12,7 +12,7 @@ public sealed class CreateDailyRecordRequest
 {
     private const string MinimumQuantity = "0.001";
 
-    private const string MaximumQuantity = "9999999.999";
+    private const string MaximumQuantity = "10000";
 
     /// <summary>
     /// 食物資料識別碼。
@@ -23,7 +23,7 @@ public sealed class CreateDailyRecordRequest
     /// 食用數量。
     /// </summary>
     /// <remarks>
-    /// 數量必須大於 0，避免建立沒有實際攝取量的飲食紀錄。
+    /// 數量必須介於 0.001 到 10000 之間，避免建立沒有實際攝取量或明顯不合理的飲食紀錄。
     /// </remarks>
     [Range(typeof(decimal), MinimumQuantity, MaximumQuantity)]
     public decimal Quantity { get; init; }

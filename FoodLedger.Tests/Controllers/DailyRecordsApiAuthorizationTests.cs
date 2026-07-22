@@ -151,7 +151,7 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
-    /// 驗證已驗證 request 的食用數量超過資料庫欄位上限時，API 會由模型驗證回傳 400 且不進入 Service。
+    /// 驗證已驗證 request 的食用數量超過 API 可接受上限時，API 會由模型驗證回傳 400 且不進入 Service。
     /// </summary>
     [Test]
     public async Task Create_WhenQuantityExceedsMaximum_ReturnsBadRequestAndDoesNotCallService()
@@ -182,7 +182,38 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
-    /// 驗證每日飲食紀錄 API 收到最大合法食用量時，應通過模型驗證並交由 Service 處理。
+    /// 驗證已驗證 request 的食用數量超過業務上限時，API 會由模型驗證回傳 400 且不進入 Service。
+    /// </summary>
+    [Test]
+    public async Task Create_WhenQuantityExceedsBusinessMaximum_ReturnsBadRequestAndDoesNotCallService()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        var request = new
+        {
+            FoodId = 1,
+            Quantity = 10000.001m,
+            ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
+        };
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/daily-records", request);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(dailyRecordService.WasCalled, Is.False);
+        });
+    }
+
+    /// <summary>
+    /// 驗證每日飲食紀錄 API 收到最大合法業務食用量時，應通過模型驗證並交由 Service 處理。
     /// </summary>
     [Test]
     public async Task Create_WhenQuantityIsMaximumAllowedValue_CallsServiceAndReturnsNoContent()
@@ -198,7 +229,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 1,
-            Quantity = 9999999.999m,
+            Quantity = 10000m,
             ConsumedAt = consumedAt,
         };
 
