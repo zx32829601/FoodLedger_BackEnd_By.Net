@@ -373,6 +373,51 @@ public class DailyRecordServiceTests
     }
 
     /// <summary>
+    /// 驗證依日期查詢飲食紀錄時，Service 會包含當日開始並排除隔日開始的邊界資料。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecordsAsync_WhenRecordsAreOnDateBoundaries_IncludesStartAndExcludesNextDayStart()
+    {
+        // Arrange
+        var targetDate = new DateOnly(2026, 7, 23);
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.AddRange(
+            new DailyRecord
+            {
+                RecordId = 1,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 0, 0, 0, TimeSpan.Zero),
+            },
+            new DailyRecord
+            {
+                RecordId = 2,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 23, 59, 59, TimeSpan.Zero),
+            },
+            new DailyRecord
+            {
+                RecordId = 3,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = new DateTimeOffset(2026, 7, 24, 0, 0, 0, TimeSpan.Zero),
+            });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act
+        var records = await service.GetDailyRecordsAsync(targetDate);
+
+        // Assert
+        Assert.That(records.Select(record => record.RecordId), Is.EqualTo(new[] { 1, 2 }));
+    }
+
+    /// <summary>
     /// 驗證同一天有多筆飲食紀錄時，Service 會依食用時間由早到晚回傳穩定順序。
     /// </summary>
     [Test]
