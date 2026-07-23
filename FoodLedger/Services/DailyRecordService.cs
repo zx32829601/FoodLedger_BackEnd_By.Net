@@ -98,6 +98,7 @@ public sealed class DailyRecordService : IDailyRecordService
                 record.UserId == currentUserId
                 && record.ConsumedAt >= startAt
                 && record.ConsumedAt < endAt)
+            .OrderBy(record => record.ConsumedAt)
             .Select(record => new DailyRecordResponse
             {
                 RecordId = record.RecordId,

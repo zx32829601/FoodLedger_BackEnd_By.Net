@@ -372,6 +372,51 @@ public class DailyRecordServiceTests
         });
     }
 
+    /// <summary>
+    /// 驗證同一天有多筆飲食紀錄時，Service 會依食用時間由早到晚回傳穩定順序。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecordsAsync_WhenCurrentUserHasMultipleRecordsOnDate_ReturnsRecordsOrderedByConsumedAt()
+    {
+        // Arrange
+        var targetDate = new DateOnly(2026, 7, 23);
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.AddRange(
+            new DailyRecord
+            {
+                RecordId = 1,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 18, 0, 0, TimeSpan.Zero),
+            },
+            new DailyRecord
+            {
+                RecordId = 2,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 8, 0, 0, TimeSpan.Zero),
+            },
+            new DailyRecord
+            {
+                RecordId = 3,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+            });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act
+        var records = await service.GetDailyRecordsAsync(targetDate);
+
+        // Assert
+        Assert.That(records.Select(record => record.RecordId), Is.EqualTo(new[] { 2, 3, 1 }));
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
