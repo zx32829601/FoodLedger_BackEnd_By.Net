@@ -51,6 +51,11 @@ public sealed class DailyRecordService : IDailyRecordService
             throw new ArgumentOutOfRangeException(nameof(request.Quantity));
         }
 
+        if (request.FoodId <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request.FoodId));
+        }
+
         if (request.ConsumedAt > _timeProvider.GetUtcNow())
         {
             throw new ArgumentOutOfRangeException(nameof(request.ConsumedAt));

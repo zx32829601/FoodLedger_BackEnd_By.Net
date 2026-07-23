@@ -74,6 +74,30 @@ public class DailyRecordServiceTests
     }
 
     /// <summary>
+    /// 驗證食物識別碼為 0 時，Service 會視為參數範圍錯誤並避免寫入每日紀錄。
+    /// </summary>
+    [Test]
+    public async Task CreateDailyRecordAsync_WhenFoodIdIsZero_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 0,
+            Quantity = 1,
+            ConsumedAt = FixedUtcNow,
+        };
+
+        // Act & Assert
+        var exception = Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            async () => await service.CreateDailyRecordAsync(request));
+        Assert.That(exception?.ParamName, Is.EqualTo(nameof(CreateDailyRecordRequest.FoodId)));
+        Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
+    }
+
+    /// <summary>
     /// 驗證餐點份量為 0 或負數時，Service 會拒絕新增並維持資料庫不被寫入。
     /// </summary>
     [TestCase(0)]
