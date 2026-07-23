@@ -90,6 +90,37 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
+    /// 驗證已驗證 request 的食物識別碼為 0 時，API 會由模型驗證回傳 400 且不進入 Service。
+    /// </summary>
+    [Test]
+    public async Task Create_WhenFoodIdIsZero_ReturnsBadRequestAndDoesNotCallService()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        var request = new
+        {
+            FoodId = 0,
+            Quantity = 1,
+            ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
+        };
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/daily-records", request);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(dailyRecordService.WasCalled, Is.False);
+        });
+    }
+
+    /// <summary>
     /// 驗證已驗證 request 的食用數量為 0 時，API 會由模型驗證回傳 400 且不進入 Service。
     /// </summary>
     [Test]

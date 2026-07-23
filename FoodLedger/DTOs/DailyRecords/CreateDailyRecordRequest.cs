@@ -17,6 +17,10 @@ public sealed class CreateDailyRecordRequest
     /// <summary>
     /// 食物資料識別碼。
     /// </summary>
+    /// <remarks>
+    /// 識別碼必須大於 0，避免無效的食物識別碼進入 Service 流程。
+    /// </remarks>
+    [Range(1, long.MaxValue)]
     public long FoodId { get; init; }
 
     /// <summary>
