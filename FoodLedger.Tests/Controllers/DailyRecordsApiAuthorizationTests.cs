@@ -428,5 +428,12 @@ public class DailyRecordsApiAuthorizationTests
             ReceivedRequest = request;
             return Task.CompletedTask;
         }
+
+        public Task<IReadOnlyList<DailyRecordResponse>> GetDailyRecordsAsync(
+            DateOnly date,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<DailyRecordResponse>>([]);
+        }
     }
 }

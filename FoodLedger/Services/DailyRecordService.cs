@@ -79,4 +79,32 @@ public sealed class DailyRecordService : IDailyRecordService
         _dbContext.DailyRecords.Add(dailyRecord);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<DailyRecordResponse>> GetDailyRecordsAsync(
+        DateOnly date,
+        CancellationToken cancellationToken = default)
+    {
+        if (_currentUserService.UserId is not { } currentUserId)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var startAt = new DateTimeOffset(date, TimeOnly.MinValue, TimeSpan.Zero);
+        var endAt = startAt.AddDays(1);
+
+        return await _dbContext.DailyRecords
+            .Where(record =>
+                record.UserId == currentUserId
+                && record.ConsumedAt >= startAt
+                && record.ConsumedAt < endAt)
+            .Select(record => new DailyRecordResponse
+            {
+                RecordId = record.RecordId,
+                FoodId = record.FoodId,
+                Quantity = record.Quantity,
+                ConsumedAt = record.ConsumedAt,
+            })
+            .ToListAsync(cancellationToken);
+    }
 }

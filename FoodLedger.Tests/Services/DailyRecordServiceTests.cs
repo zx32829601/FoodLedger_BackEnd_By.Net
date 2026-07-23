@@ -320,6 +320,58 @@ public class DailyRecordServiceTests
         Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
     }
 
+    /// <summary>
+    /// 驗證依日期查詢飲食紀錄時，Service 只會回傳目前登入使用者在指定 UTC 日期內的資料。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecordsAsync_WhenCurrentUserHasRecordsOnDate_ReturnsOnlyThatUsersRecordsForDate()
+    {
+        // Arrange
+        var targetDate = new DateOnly(2026, 7, 23);
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.AddRange(
+            new DailyRecord
+            {
+                RecordId = 1,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1.5m,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+            },
+            new DailyRecord
+            {
+                RecordId = 2,
+                UserId = 99,
+                FoodId = 1,
+                Quantity = 2,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 13, 0, 0, TimeSpan.Zero),
+            },
+            new DailyRecord
+            {
+                RecordId = 3,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 3,
+                ConsumedAt = new DateTimeOffset(2026, 7, 24, 12, 0, 0, TimeSpan.Zero),
+            });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act
+        var records = await service.GetDailyRecordsAsync(targetDate);
+
+        // Assert
+        var dailyRecord = records.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(dailyRecord.RecordId, Is.EqualTo(1));
+            Assert.That(dailyRecord.FoodId, Is.EqualTo(1));
+            Assert.That(dailyRecord.Quantity, Is.EqualTo(1.5m));
+            Assert.That(dailyRecord.ConsumedAt, Is.EqualTo(new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero)));
+        });
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
