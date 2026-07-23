@@ -417,6 +417,22 @@ public class DailyRecordServiceTests
         Assert.That(records.Select(record => record.RecordId), Is.EqualTo(new[] { 2, 3, 1 }));
     }
 
+    /// <summary>
+    /// 驗證未登入使用者查詢飲食紀錄時，Service 會拒絕讀取私有資料。
+    /// </summary>
+    [Test]
+    public void GetDailyRecordsAsync_WhenCurrentUserIsMissing_ThrowsUnauthorizedAccessException()
+    {
+        // Arrange
+        using var dbContext = CreateDbContext();
+        var currentUserService = new TestCurrentUserService { UserId = null };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act & Assert
+        Assert.ThrowsAsync<UnauthorizedAccessException>(
+            async () => await service.GetDailyRecordsAsync(new DateOnly(2026, 7, 23)));
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
