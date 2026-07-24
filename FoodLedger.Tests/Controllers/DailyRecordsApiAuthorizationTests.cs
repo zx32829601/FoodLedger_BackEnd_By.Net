@@ -628,5 +628,13 @@ public class DailyRecordsApiAuthorizationTests
             ReceivedDate = date;
             return Task.FromResult(RecordsToReturn);
         }
+
+        public Task DeleteDailyRecordAsync(
+            long recordId,
+            CancellationToken cancellationToken = default)
+        {
+            WasCalled = true;
+            return Task.CompletedTask;
+        }
     }
 }

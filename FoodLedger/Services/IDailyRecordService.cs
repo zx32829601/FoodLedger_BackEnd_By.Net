@@ -27,4 +27,14 @@ public interface IDailyRecordService
     Task<IReadOnlyList<DailyRecordResponse>> GetDailyRecordsAsync(
         DateOnly date,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 刪除目前登入使用者的一筆每日飲食紀錄。
+    /// </summary>
+    /// <param name="recordId">要刪除的每日飲食紀錄識別碼。</param>
+    /// <param name="cancellationToken">取消刪除作業的通知權杖。</param>
+    /// <returns>代表非同步刪除作業的工作。</returns>
+    Task DeleteDailyRecordAsync(
+        long recordId,
+        CancellationToken cancellationToken = default);
 }

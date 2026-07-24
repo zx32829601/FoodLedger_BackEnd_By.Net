@@ -524,6 +524,33 @@ public class DailyRecordServiceTests
             async () => await service.GetDailyRecordsAsync(new DateOnly(2026, 7, 23)));
     }
 
+    /// <summary>
+    /// 驗證刪除屬於目前登入使用者的飲食紀錄時，Service 會從資料庫移除該筆資料。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecordAsync_WhenRecordBelongsToCurrentUser_RemovesRecord()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.Add(new DailyRecord
+        {
+            RecordId = 1,
+            UserId = CurrentUserId,
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+        });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act
+        await service.DeleteDailyRecordAsync(1);
+
+        // Assert
+        Assert.That(await dbContext.DailyRecords.AnyAsync(record => record.RecordId == 1), Is.False);
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()

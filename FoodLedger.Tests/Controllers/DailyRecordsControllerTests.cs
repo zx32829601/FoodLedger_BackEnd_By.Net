@@ -203,6 +203,13 @@ public class DailyRecordsControllerTests
             ReceivedGetCancellationToken = cancellationToken;
             return Task.FromResult(RecordsToReturn);
         }
+
+        public Task DeleteDailyRecordAsync(
+            long recordId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class ThrowingDailyRecordService : IDailyRecordService
@@ -223,6 +230,13 @@ public class DailyRecordsControllerTests
 
         public Task<IReadOnlyList<DailyRecordResponse>> GetDailyRecordsAsync(
             DateOnly date,
+            CancellationToken cancellationToken = default)
+        {
+            throw _exception;
+        }
+
+        public Task DeleteDailyRecordAsync(
+            long recordId,
             CancellationToken cancellationToken = default)
         {
             throw _exception;

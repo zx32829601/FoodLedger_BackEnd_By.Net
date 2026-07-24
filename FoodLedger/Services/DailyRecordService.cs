@@ -109,4 +109,28 @@ public sealed class DailyRecordService : IDailyRecordService
             })
             .ToListAsync(cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task DeleteDailyRecordAsync(
+        long recordId,
+        CancellationToken cancellationToken = default)
+    {
+        if (_currentUserService.UserId is not { } currentUserId)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var dailyRecord = await _dbContext.DailyRecords
+            .FirstOrDefaultAsync(record =>
+                record.RecordId == recordId
+                && record.UserId == currentUserId,
+                cancellationToken);
+        if (dailyRecord is null)
+        {
+            throw new KeyNotFoundException($"DailyRecord {recordId} does not exist.");
+        }
+
+        _dbContext.DailyRecords.Remove(dailyRecord);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
 }
