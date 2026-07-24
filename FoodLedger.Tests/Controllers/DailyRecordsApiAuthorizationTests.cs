@@ -159,6 +159,36 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
+    /// 驗證查詢飲食紀錄沒有資料時，API 會回傳 200 OK 與空陣列。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenServiceReturnsNoRecords_ReturnsOkWithEmptyArray()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+
+        // Act
+        var response = await client.GetAsync("/api/daily-records?date=2026-07-23");
+
+        // Assert
+        await using var responseStream = await response.Content.ReadAsStreamAsync();
+        using var records = await JsonDocument.ParseAsync(responseStream);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(records.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
+            Assert.That(records.RootElement.GetArrayLength(), Is.EqualTo(0));
+            Assert.That(dailyRecordService.GetCallCount, Is.EqualTo(1));
+        });
+    }
+
+    /// <summary>
     /// 驗證已驗證 request 的查詢日期格式無效時，API 會由模型綁定回傳 400 且不進入 Service。
     /// </summary>
     [Test]
