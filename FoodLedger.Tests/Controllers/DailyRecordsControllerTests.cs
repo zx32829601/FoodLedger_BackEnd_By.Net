@@ -52,6 +52,23 @@ public class DailyRecordsControllerTests
     }
 
     /// <summary>
+    /// 驗證查詢飲食紀錄時 Service 回報未授權，Controller 會轉成 401 Unauthorized。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenServiceThrowsUnauthorizedAccessException_ReturnsUnauthorized()
+    {
+        // Arrange
+        var dailyRecordService = new ThrowingDailyRecordService(new UnauthorizedAccessException());
+        var controller = new DailyRecordsController(dailyRecordService);
+
+        // Act
+        var result = await controller.GetDailyRecords(new DateOnly(2026, 7, 23), CancellationToken.None);
+
+        // Assert
+        Assert.That(result, Is.TypeOf<UnauthorizedResult>());
+    }
+
+    /// <summary>
     /// 驗證新增飲食紀錄 request 有效時，Controller 會將同一份 request 與取消權杖交給 Service，並回傳 204 No Content。
     /// </summary>
     [Test]

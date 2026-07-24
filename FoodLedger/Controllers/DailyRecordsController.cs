@@ -51,8 +51,15 @@ public sealed class DailyRecordsController : ControllerBase
         [FromQuery] DateOnly date,
         CancellationToken cancellationToken = default)
     {
-        var records = await _dailyRecordService.GetDailyRecordsAsync(date, cancellationToken);
-        return Ok(records);
+        try
+        {
+            var records = await _dailyRecordService.GetDailyRecordsAsync(date, cancellationToken);
+            return Ok(records);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
     }
 
     /// <summary>
