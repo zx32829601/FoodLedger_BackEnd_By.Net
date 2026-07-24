@@ -577,6 +577,32 @@ public class DailyRecordServiceTests
         Assert.That(await dbContext.DailyRecords.AnyAsync(record => record.RecordId == 1), Is.True);
     }
 
+    /// <summary>
+    /// 驗證目前登入使用者嘗試刪除其他使用者的飲食紀錄時，Service 會使用找不到資料語意拒絕並保留資料。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecordAsync_WhenRecordBelongsToAnotherUser_ThrowsKeyNotFoundExceptionAndDoesNotDeleteRecord()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.Add(new DailyRecord
+        {
+            RecordId = 1,
+            UserId = 99,
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+        });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act & Assert
+        Assert.ThrowsAsync<KeyNotFoundException>(
+            async () => await service.DeleteDailyRecordAsync(1));
+        Assert.That(await dbContext.DailyRecords.AnyAsync(record => record.RecordId == 1), Is.True);
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
