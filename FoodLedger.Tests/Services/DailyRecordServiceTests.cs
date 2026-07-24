@@ -551,6 +551,32 @@ public class DailyRecordServiceTests
         Assert.That(await dbContext.DailyRecords.AnyAsync(record => record.RecordId == 1), Is.False);
     }
 
+    /// <summary>
+    /// 驗證未登入使用者刪除飲食紀錄時，Service 會拒絕操作並保留既有資料。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecordAsync_WhenCurrentUserIsMissing_ThrowsUnauthorizedAccessExceptionAndDoesNotDeleteRecord()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.Add(new DailyRecord
+        {
+            RecordId = 1,
+            UserId = CurrentUserId,
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+        });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = null };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act & Assert
+        Assert.ThrowsAsync<UnauthorizedAccessException>(
+            async () => await service.DeleteDailyRecordAsync(1));
+        Assert.That(await dbContext.DailyRecords.AnyAsync(record => record.RecordId == 1), Is.True);
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
