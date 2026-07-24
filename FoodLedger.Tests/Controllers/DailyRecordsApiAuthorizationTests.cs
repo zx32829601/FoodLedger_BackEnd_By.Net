@@ -119,6 +119,46 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
+    /// 驗證查詢飲食紀錄成功時，API response 會包含可解析且代表同一 UTC 時間點的食用時間。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenRequestIsAuthenticated_ReturnsConsumedAtInResponse()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var expectedConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero);
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        dailyRecordService.RecordsToReturn =
+        [
+            new DailyRecordResponse
+            {
+                RecordId = 1,
+                FoodId = 2,
+                Quantity = 1.5m,
+                ConsumedAt = expectedConsumedAt,
+            },
+        ];
+
+        // Act
+        var response = await client.GetAsync("/api/daily-records?date=2026-07-23");
+
+        // Assert
+        await using var responseStream = await response.Content.ReadAsStreamAsync();
+        using var records = await JsonDocument.ParseAsync(responseStream);
+        var consumedAt = records.RootElement[0].GetProperty("consumedAt").GetDateTimeOffset();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(consumedAt.ToUniversalTime(), Is.EqualTo(expectedConsumedAt));
+        });
+    }
+
+    /// <summary>
     /// 驗證已驗證 request 的查詢日期格式無效時，API 會由模型綁定回傳 400 且不進入 Service。
     /// </summary>
     [Test]
