@@ -2,6 +2,7 @@ using FoodLedger.DTOs.DailyRecords;
 using FoodLedger.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace FoodLedger.Controllers;
 
@@ -46,9 +47,10 @@ public sealed class DailyRecordsController : ControllerBase
     /// </example>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<DailyRecordResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetDailyRecords(
-        [FromQuery] DateOnly date,
+        [FromQuery, BindRequired] DateOnly date,
         CancellationToken cancellationToken = default)
     {
         try

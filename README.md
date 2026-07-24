@@ -58,6 +58,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 為 `GET /api/daily-records` 未登入 request 會被授權 middleware 擋下並回傳 401 Unauthorized 補上 API 整合測試。
 - [x] 為 `GET /api/daily-records` 已驗證 request 會通過授權 middleware、綁定查詢日期、呼叫 Service 並回傳 200 OK 補上 API 整合測試。
 - [x] 為 `GET /api/daily-records` 查詢日期格式無效時由 API model binding 回傳 400 並避免進入 Service 補上整合測試。
+- [x] 為 `GET /api/daily-records` 缺少查詢日期時由 API model binding 回傳 400 並避免進入 Service 補上整合測試。
 - [x] 為 `POST /api/daily-records` 已驗證 request 會通過授權 middleware、呼叫 Service 並回傳 204 No Content 補上 API 整合測試。
 - [x] 為 `POST /api/daily-records` 食物識別碼為 0 時由 API model validation 回傳 400 並避免進入 Service 補上整合測試。
 - [x] 為 `POST /api/daily-records` 食用數量為 0 時由 API model validation 回傳 400 並避免進入 Service 補上整合測試。
