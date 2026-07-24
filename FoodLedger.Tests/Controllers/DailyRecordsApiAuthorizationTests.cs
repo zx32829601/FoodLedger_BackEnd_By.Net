@@ -77,6 +77,48 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
+    /// 驗證已通過驗證的 request 呼叫查詢每日飲食紀錄 API 時，會進入 Service 並回傳 200 OK。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenRequestIsAuthenticated_CallsServiceAndReturnsOk()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        dailyRecordService.RecordsToReturn =
+        [
+            new DailyRecordResponse
+            {
+                RecordId = 1,
+                FoodId = 2,
+                Quantity = 1.5m,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+            },
+        ];
+
+        // Act
+        var response = await client.GetAsync("/api/daily-records?date=2026-07-23");
+
+        // Assert
+        var records = await response.Content.ReadFromJsonAsync<DailyRecordResponse[]>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(dailyRecordService.GetCallCount, Is.EqualTo(1));
+            Assert.That(dailyRecordService.ReceivedDate, Is.EqualTo(new DateOnly(2026, 7, 23)));
+            Assert.That(records, Is.Not.Null);
+            Assert.That(records!, Has.Length.EqualTo(1));
+            Assert.That(records![0].RecordId, Is.EqualTo(1));
+            Assert.That(records[0].FoodId, Is.EqualTo(2));
+            Assert.That(records[0].Quantity, Is.EqualTo(1.5m));
+        });
+    }
+
+    /// <summary>
     /// 驗證已通過驗證的 request 呼叫新增每日飲食紀錄 API 時，會進入 Service 並回傳 204 No Content。
     /// </summary>
     [Test]
@@ -437,9 +479,15 @@ public class DailyRecordsApiAuthorizationTests
     {
         public int CallCount { get; private set; }
 
+        public int GetCallCount { get; private set; }
+
         public bool WasCalled { get; private set; }
 
         public CreateDailyRecordRequest? ReceivedRequest { get; private set; }
+
+        public DateOnly? ReceivedDate { get; private set; }
+
+        public IReadOnlyList<DailyRecordResponse> RecordsToReturn { get; set; } = [];
 
         public Task CreateDailyRecordAsync(
             CreateDailyRecordRequest request,
@@ -455,7 +503,10 @@ public class DailyRecordsApiAuthorizationTests
             DateOnly date,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IReadOnlyList<DailyRecordResponse>>([]);
+            GetCallCount++;
+            WasCalled = true;
+            ReceivedDate = date;
+            return Task.FromResult(RecordsToReturn);
         }
     }
 }
