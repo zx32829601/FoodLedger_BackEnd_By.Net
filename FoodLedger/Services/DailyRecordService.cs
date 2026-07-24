@@ -99,6 +99,7 @@ public sealed class DailyRecordService : IDailyRecordService
                 && record.ConsumedAt >= startAt
                 && record.ConsumedAt < endAt)
             .OrderBy(record => record.ConsumedAt)
+            .ThenBy(record => record.RecordId)
             .Select(record => new DailyRecordResponse
             {
                 RecordId = record.RecordId,

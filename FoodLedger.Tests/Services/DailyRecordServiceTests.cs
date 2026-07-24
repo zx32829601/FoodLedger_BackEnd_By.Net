@@ -463,6 +463,52 @@ public class DailyRecordServiceTests
     }
 
     /// <summary>
+    /// 驗證食用時間完全相同時，Service 會再依飲食紀錄識別碼由小到大回傳穩定順序。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecordsAsync_WhenRecordsHaveSameConsumedAt_ReturnsRecordsOrderedByRecordId()
+    {
+        // Arrange
+        var targetDate = new DateOnly(2026, 7, 23);
+        var consumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero);
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.AddRange(
+            new DailyRecord
+            {
+                RecordId = 3,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = consumedAt,
+            },
+            new DailyRecord
+            {
+                RecordId = 1,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = consumedAt,
+            },
+            new DailyRecord
+            {
+                RecordId = 2,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = consumedAt,
+            });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act
+        var records = await service.GetDailyRecordsAsync(targetDate);
+
+        // Assert
+        Assert.That(records.Select(record => record.RecordId), Is.EqualTo(new[] { 1, 2, 3 }));
+    }
+
+    /// <summary>
     /// 驗證未登入使用者查詢飲食紀錄時，Service 會拒絕讀取私有資料。
     /// </summary>
     [Test]

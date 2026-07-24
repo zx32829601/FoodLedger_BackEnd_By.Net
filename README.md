@@ -47,6 +47,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 為 `DailyRecordService` 依 UTC 日期查詢目前登入使用者自己的飲食紀錄補上 Service 層測試。
 - [x] 為 `DailyRecordService` 依 UTC 日期查詢時包含當日開始並排除隔日開始補上 Service 層邊界測試。
 - [x] 為 `DailyRecordService` 依 UTC 日期查詢多筆飲食紀錄時依食用時間由早到晚排序補上 Service 層測試。
+- [x] 為 `DailyRecordService` 依 UTC 日期查詢多筆同食用時間紀錄時依紀錄識別碼排序補上 Service 層測試。
 - [x] 為 `DailyRecordService` 未登入查詢飲食紀錄時拒絕讀取私有資料補上 Service 層測試。
 - [x] 為 `DailyRecordsController` 查詢飲食紀錄成功時呼叫 Service 並回傳 200 OK 補上 Controller 測試。
 - [x] 為 `DailyRecordsController` 查詢飲食紀錄時處理 Service 未授權錯誤並回傳 401 Unauthorized 補上 Controller 測試。
