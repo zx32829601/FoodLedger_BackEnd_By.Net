@@ -55,6 +55,28 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
+    /// 驗證未登入 request 呼叫查詢每日飲食紀錄 API 時，會被 Authorize middleware 擋下並回傳 401 Unauthorized。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenRequestIsAnonymous_ReturnsUnauthorized()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+
+        // Act
+        var response = await client.GetAsync("/api/daily-records?date=2026-07-23");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+            Assert.That(dailyRecordService.WasCalled, Is.False);
+        });
+    }
+
+    /// <summary>
     /// 驗證已通過驗證的 request 呼叫新增每日飲食紀錄 API 時，會進入 Service 並回傳 204 No Content。
     /// </summary>
     [Test]
