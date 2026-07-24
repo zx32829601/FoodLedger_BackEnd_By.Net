@@ -29,6 +29,33 @@ public sealed class DailyRecordsController : ControllerBase
     }
 
     /// <summary>
+    /// 查詢目前登入使用者在指定 UTC 日期內的每日飲食紀錄。
+    /// </summary>
+    /// <param name="date">要查詢的 UTC 日期，格式建議使用 <c>yyyy-MM-dd</c>。</param>
+    /// <param name="cancellationToken">取消目前 HTTP request 的通知權杖。</param>
+    /// <returns>查詢成功時回傳 <c>200 OK</c> 與飲食紀錄清單。</returns>
+    /// <remarks>
+    /// 實際可查詢的使用者由登入狀態與 <see cref="IDailyRecordService" /> 決定，前端不需也不應提供 UserId。
+    /// </remarks>
+    /// <example>
+    /// Request:
+    /// <code>
+    /// GET /api/daily-records?date=2026-07-23
+    /// Authorization: Bearer {accessToken}
+    /// </code>
+    /// </example>
+    [HttpGet]
+    [ProducesResponseType(typeof(IReadOnlyList<DailyRecordResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetDailyRecords(
+        [FromQuery] DateOnly date,
+        CancellationToken cancellationToken = default)
+    {
+        var records = await _dailyRecordService.GetDailyRecordsAsync(date, cancellationToken);
+        return Ok(records);
+    }
+
+    /// <summary>
     /// 建立目前登入使用者的一筆每日飲食紀錄。
     /// </summary>
     /// <param name="request">新增飲食紀錄所需的食物、份量與實際攝取時間。</param>

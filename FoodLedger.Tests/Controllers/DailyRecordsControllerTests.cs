@@ -12,6 +12,46 @@ namespace FoodLedger.Tests.Controllers;
 public class DailyRecordsControllerTests
 {
     /// <summary>
+    /// 驗證查詢飲食紀錄成功時，Controller 會將日期與取消權杖交給 Service，並回傳 200 OK 與紀錄清單。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenServiceReturnsRecords_ReturnsOkWithRecords()
+    {
+        // Arrange
+        var expectedRecords = new[]
+        {
+            new DailyRecordResponse
+            {
+                RecordId = 1,
+                FoodId = 2,
+                Quantity = 1.5m,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+            },
+        };
+        var dailyRecordService = new RecordingDailyRecordService
+        {
+            RecordsToReturn = expectedRecords,
+        };
+        var controller = new DailyRecordsController(dailyRecordService);
+        var date = new DateOnly(2026, 7, 23);
+        using var cancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = cancellationTokenSource.Token;
+
+        // Act
+        var result = await controller.GetDailyRecords(date, cancellationToken);
+
+        // Assert
+        var okResult = result as OkObjectResult;
+        Assert.That(okResult, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(okResult!.Value, Is.SameAs(expectedRecords));
+            Assert.That(dailyRecordService.ReceivedDate, Is.EqualTo(date));
+            Assert.That(dailyRecordService.ReceivedGetCancellationToken, Is.EqualTo(cancellationToken));
+        });
+    }
+
+    /// <summary>
     /// 驗證新增飲食紀錄 request 有效時，Controller 會將同一份 request 與取消權杖交給 Service，並回傳 204 No Content。
     /// </summary>
     [Test]
@@ -123,6 +163,12 @@ public class DailyRecordsControllerTests
 
         public CancellationToken ReceivedCancellationToken { get; private set; }
 
+        public DateOnly? ReceivedDate { get; private set; }
+
+        public CancellationToken ReceivedGetCancellationToken { get; private set; }
+
+        public IReadOnlyList<DailyRecordResponse> RecordsToReturn { get; init; } = [];
+
         public Task CreateDailyRecordAsync(
             CreateDailyRecordRequest request,
             CancellationToken cancellationToken = default)
@@ -136,7 +182,9 @@ public class DailyRecordsControllerTests
             DateOnly date,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IReadOnlyList<DailyRecordResponse>>([]);
+            ReceivedDate = date;
+            ReceivedGetCancellationToken = cancellationToken;
+            return Task.FromResult(RecordsToReturn);
         }
     }
 
