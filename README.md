@@ -19,7 +19,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 
 ### P1：後端分層與核心功能
 
-- [ ] 建立 Service 層架構，避免 Controller 直接放商業邏輯。目前已建立 `DailyRecordService` 新增紀錄切片，支援未登入拒絕、使用目前登入者建立紀錄、拒絕 0 或負數份量紀錄、拒絕不存在的食物，以及拒絕未來時間紀錄。
+- [ ] 建立 Service 層架構，避免 Controller 直接放商業邏輯。目前已建立 `DailyRecordService` 新增紀錄切片，支援未登入拒絕、使用目前登入者建立紀錄、拒絕 0 或負數份量紀錄、拒絕無效食物識別碼、拒絕不存在的食物，以及拒絕未來時間紀錄。
 - [ ] 建立 Request / Response DTO，API response 不直接暴露 Entity。
 - [ ] 實作食物查詢 API，支援關鍵字、分類與語系查詢。
 - [ ] 實作每日飲食紀錄 API，支援新增、查詢、修改與刪除自己的紀錄。目前已建立 `POST /api/daily-records` 第一個 Controller 邊界切片，將 Service 欄位範圍錯誤轉為 400 驗證回應、資源不存在錯誤轉為 404 回應，並將未授權錯誤轉為 401 回應。
@@ -43,17 +43,21 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 為 `DailyRecordService` 非 UTC offset 但實際時間點晚於目前 UTC 時拒絕新增補上測試。
 - [x] 為 `DailyRecordService` 餐點份量超過業務上限 `10000` 時拒絕新增並避免寫入資料庫補上 Service 層測試。
 - [x] 為 `DailyRecordService` 餐點份量等於業務上限 `10000` 時允許新增補上 Service 層邊界測試。
+- [x] 為 `DailyRecordService` 食物識別碼為 0 時拒絕新增並避免查詢不存在食物流程補上 Service 層測試。
 - [x] 為 `DailyRecordsController` 處理 Service 欄位範圍錯誤並回傳 400 ValidationProblem 補上 Controller 測試。
 - [x] 為 `DailyRecordsController` 成功新增時呼叫 Service 並回傳 204 No Content 補上 Controller 測試。
 - [x] 為 `DailyRecordsController` 處理 Service 資源不存在錯誤並回傳 404 Not Found 補上 Controller 測試。
 - [x] 為 `DailyRecordsController` 處理 Service 未授權錯誤並回傳 401 Unauthorized 補上 Controller 測試。
 - [x] 為 `POST /api/daily-records` 未登入 request 會被授權 middleware 擋下並回傳 401 Unauthorized 補上 API 整合測試。
 - [x] 為 `POST /api/daily-records` 已驗證 request 會通過授權 middleware、呼叫 Service 並回傳 204 No Content 補上 API 整合測試。
+- [x] 為 `POST /api/daily-records` 食物識別碼為 0 時由 API model validation 回傳 400 並避免進入 Service 補上整合測試。
 - [x] 為 `POST /api/daily-records` 食用數量為 0 時由 API model validation 回傳 400 並避免進入 Service 補上整合測試。
 - [x] 為 `POST /api/daily-records` 食用數量為負數時由 API model validation 回傳 400 並避免進入 Service 補上整合測試。
 - [x] 為 `POST /api/daily-records` 食用數量超過 API 可接受上限時由 model validation 回傳 400 並避免進入 Service 補上整合測試。
 - [x] 為 `POST /api/daily-records` 食用數量等於業務最大合法值時可通過 API model validation 並呼叫 Service 補上整合測試。
 - [x] 為 `POST /api/daily-records` 食用數量超過業務上限 `10000` 時由 API model validation 回傳 400 並避免進入 Service 補上整合測試。
+- [x] 為 `POST /api/daily-records` 食用數量為 0 的 validation problem 回應包含 `Quantity` 欄位錯誤補上整合測試。
+- [x] 為 `POST /api/daily-records` 食用數量為 0 的 `errors.Quantity` 回應為非空陣列補上整合測試。
 - [ ] 為 Service 層補單元測試或接近整合測試的 EF Core InMemory 測試。
 - [ ] 補食物查詢、分類篩選、營養素換算、每日飲食紀錄與使用者資料隔離測試。
 - [ ] 補 API route、驗證與授權整合測試。
