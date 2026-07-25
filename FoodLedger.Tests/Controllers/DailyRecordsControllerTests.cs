@@ -198,6 +198,23 @@ public class DailyRecordsControllerTests
         });
     }
 
+    /// <summary>
+    /// 驗證刪除飲食紀錄時 Service 回報未授權，Controller 會轉成 401 Unauthorized。
+    /// </summary>
+    [Test]
+    public async Task Delete_WhenServiceThrowsUnauthorizedAccessException_ReturnsUnauthorized()
+    {
+        // Arrange
+        var dailyRecordService = new ThrowingDailyRecordService(new UnauthorizedAccessException());
+        var controller = new DailyRecordsController(dailyRecordService);
+
+        // Act
+        var result = await controller.Delete(1, CancellationToken.None);
+
+        // Assert
+        Assert.That(result, Is.TypeOf<UnauthorizedResult>());
+    }
+
     private sealed class RecordingDailyRecordService : IDailyRecordService
     {
         public CreateDailyRecordRequest? ReceivedRequest { get; private set; }

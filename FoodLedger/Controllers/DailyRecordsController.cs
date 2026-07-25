@@ -142,7 +142,15 @@ public sealed class DailyRecordsController : ControllerBase
         long recordId,
         CancellationToken cancellationToken = default)
     {
-        await _dailyRecordService.DeleteDailyRecordAsync(recordId, cancellationToken);
+        try
+        {
+            await _dailyRecordService.DeleteDailyRecordAsync(recordId, cancellationToken);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+
         return NoContent();
     }
 }
