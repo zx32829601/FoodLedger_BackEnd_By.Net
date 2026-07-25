@@ -11,10 +11,17 @@ pipeline {
             defaultValue: false,
             description: 'Run local docker compose deployment after validation.'
         )
+        string(
+            name: 'DOCKER_CLI_BIN',
+            defaultValue: 'C:\\Users\\zx328\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin',
+            description: 'Directory that contains docker.exe on the Jenkins machine.'
+        )
     }
 
     environment {
         DOTNET_CONFIGURATION = 'Release'
+        DOCKER_DESKTOP_MACHINE_BIN = 'C:\\Program Files\\Docker\\Docker\\resources\\bin'
+        DOCKER_DESKTOP_USER_BIN = "${env.LOCALAPPDATA}\\Programs\\DockerDesktop\\resources\\bin"
     }
 
     stages {
@@ -26,11 +33,13 @@ pipeline {
 
         stage('Show Tool Versions') {
             steps {
-                powershell '''
-                    dotnet --version
-                    docker --version
-                    docker compose version
-                '''
+                withEnv(["PATH=${params.DOCKER_CLI_BIN};${env.DOCKER_DESKTOP_MACHINE_BIN};${env.DOCKER_DESKTOP_USER_BIN};${env.PATH}"]) {
+                    powershell '''
+                        dotnet --version
+                        docker --version
+                        docker compose version
+                    '''
+                }
             }
         }
 
@@ -55,6 +64,7 @@ pipeline {
         stage('Validate Docker Compose') {
             steps {
                 withEnv([
+                    "PATH=${params.DOCKER_CLI_BIN};${env.DOCKER_DESKTOP_MACHINE_BIN};${env.DOCKER_DESKTOP_USER_BIN};${env.PATH}",
                     'POSTGRES_DB=Foodledger',
                     'POSTGRES_USER=postgres',
                     'POSTGRES_PASSWORD=jenkins-ci-only-password',
@@ -73,7 +83,9 @@ pipeline {
                 }
             }
             steps {
-                powershell '.\\scripts\\deploy-local.ps1'
+                withEnv(["PATH=${params.DOCKER_CLI_BIN};${env.DOCKER_DESKTOP_MACHINE_BIN};${env.DOCKER_DESKTOP_USER_BIN};${env.PATH}"]) {
+                    powershell '.\\scripts\\deploy-local.ps1'
+                }
             }
         }
     }
