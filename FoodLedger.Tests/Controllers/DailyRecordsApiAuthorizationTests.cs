@@ -125,6 +125,32 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
+    /// 驗證刪除每日飲食紀錄時 Service 回報資源不存在，API 會回傳 404 Not Found。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecord_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        dailyRecordService.DeleteExceptionToThrow = new KeyNotFoundException("DailyRecord 999 does not exist.");
+
+        // Act
+        var response = await client.DeleteAsync("/api/daily-records/999");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(dailyRecordService.ReceivedDeleteRecordId, Is.EqualTo(999));
+        });
+    }
+
+    /// <summary>
     /// 驗證已通過驗證的 request 呼叫查詢每日飲食紀錄 API 時，會進入 Service 並回傳 200 OK。
     /// </summary>
     [Test]
@@ -659,6 +685,8 @@ public class DailyRecordsApiAuthorizationTests
 
         public long? ReceivedDeleteRecordId { get; private set; }
 
+        public Exception? DeleteExceptionToThrow { get; set; }
+
         public IReadOnlyList<DailyRecordResponse> RecordsToReturn { get; set; } = [];
 
         public Task CreateDailyRecordAsync(
@@ -688,6 +716,11 @@ public class DailyRecordsApiAuthorizationTests
             DeleteCallCount++;
             WasCalled = true;
             ReceivedDeleteRecordId = recordId;
+            if (DeleteExceptionToThrow is not null)
+            {
+                throw DeleteExceptionToThrow;
+            }
+
             return Task.CompletedTask;
         }
     }
