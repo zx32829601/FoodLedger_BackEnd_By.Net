@@ -77,6 +77,80 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
+    /// 驗證未登入 request 呼叫刪除每日飲食紀錄 API 時，會被 Authorize middleware 擋下並回傳 401 Unauthorized。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecord_WhenRequestIsAnonymous_ReturnsUnauthorizedAndDoesNotCallService()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+
+        // Act
+        var response = await client.DeleteAsync("/api/daily-records/1");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+            Assert.That(dailyRecordService.WasCalled, Is.False);
+        });
+    }
+
+    /// <summary>
+    /// 驗證已通過驗證的 request 呼叫刪除每日飲食紀錄 API 時，會進入 Service 並回傳 204 No Content。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecord_WhenRequestIsAuthenticated_CallsServiceAndReturnsNoContent()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+
+        // Act
+        var response = await client.DeleteAsync("/api/daily-records/1");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            Assert.That(dailyRecordService.DeleteCallCount, Is.EqualTo(1));
+            Assert.That(dailyRecordService.ReceivedDeleteRecordId, Is.EqualTo(1));
+        });
+    }
+
+    /// <summary>
+    /// 驗證刪除每日飲食紀錄時 Service 回報資源不存在，API 會回傳 404 Not Found。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecord_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        dailyRecordService.DeleteExceptionToThrow = new KeyNotFoundException("DailyRecord 999 does not exist.");
+
+        // Act
+        var response = await client.DeleteAsync("/api/daily-records/999");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(dailyRecordService.ReceivedDeleteRecordId, Is.EqualTo(999));
+        });
+    }
+
+    /// <summary>
     /// 驗證已通過驗證的 request 呼叫查詢每日飲食紀錄 API 時，會進入 Service 並回傳 200 OK。
     /// </summary>
     [Test]
@@ -601,11 +675,17 @@ public class DailyRecordsApiAuthorizationTests
 
         public int GetCallCount { get; private set; }
 
+        public int DeleteCallCount { get; private set; }
+
         public bool WasCalled { get; private set; }
 
         public CreateDailyRecordRequest? ReceivedRequest { get; private set; }
 
         public DateOnly? ReceivedDate { get; private set; }
+
+        public long? ReceivedDeleteRecordId { get; private set; }
+
+        public Exception? DeleteExceptionToThrow { get; set; }
 
         public IReadOnlyList<DailyRecordResponse> RecordsToReturn { get; set; } = [];
 
@@ -633,7 +713,14 @@ public class DailyRecordsApiAuthorizationTests
             long recordId,
             CancellationToken cancellationToken = default)
         {
+            DeleteCallCount++;
             WasCalled = true;
+            ReceivedDeleteRecordId = recordId;
+            if (DeleteExceptionToThrow is not null)
+            {
+                throw DeleteExceptionToThrow;
+            }
+
             return Task.CompletedTask;
         }
     }
