@@ -13,6 +13,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["FoodLedger/FoodLedger.csproj", "FoodLedger/"]
+COPY ["FoodLedger.ServiceDefaults/FoodLedger.ServiceDefaults.csproj", "FoodLedger.ServiceDefaults/"]
 RUN dotnet restore "./FoodLedger/FoodLedger.csproj"
 COPY . .
 WORKDIR "/src/FoodLedger"

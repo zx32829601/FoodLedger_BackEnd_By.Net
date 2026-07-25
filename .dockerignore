@@ -1,0 +1,14 @@
+.git
+.github
+.vs
+.agents
+.codex
+**/bin/
+**/obj/
+**/.test-output/
+**/*.user
+**/*.suo
+**/*.log
+.env
+.env.*
+!.env.example

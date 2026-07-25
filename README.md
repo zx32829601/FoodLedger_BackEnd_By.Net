@@ -2,7 +2,7 @@
 
 FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者記錄每日飲食、查詢食物營養資訊，並依據飲食紀錄統計每日營養攝取狀況。
 
-目前專案處於後端資料模型與 API 骨架階段，已建立 ASP.NET Core Web API、Entity Framework Core、PostgreSQL、ASP.NET Core Identity、.NET Aspire AppHost、ServiceDefaults、Swagger / OpenAPI 與 Web API Dockerfile。
+目前專案處於後端資料模型與 API 骨架階段，已建立 ASP.NET Core Web API、Entity Framework Core、PostgreSQL、ASP.NET Core Identity、.NET Aspire AppHost、ServiceDefaults、Swagger / OpenAPI、Web API Dockerfile 與本機 Docker Compose 基礎環境。
 
 ## TODO List
 
@@ -86,8 +86,8 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 
 ### P3：部署、前端與維運
 
-- [ ] 建立 Docker Compose，編排 Web API 與 PostgreSQL 本機環境。
-- [ ] 建立 CI/CD 流程，包含 restore、build、test、映像檔產生與部署。
+- [x] 建立 Docker Compose，編排 Web API 與 PostgreSQL 本機環境。
+- [ ] 建立 CI/CD 流程，包含 restore、build、test、映像檔產生與部署。目前 GitHub Actions 已包含 restore、build、test、`docker compose config --quiet` 與 Docker image build 驗證；正式 image push 與部署仍待補。
 - [ ] 規劃 React + TypeScript + Vite Web 前台。
 - [ ] 規劃 React + TypeScript + Vite 管理後台。
 - [ ] 規劃 Flutter App。
@@ -129,6 +129,9 @@ FoodLedger_BackEnd_By.Net/
 │  ├─ Controllers/
 │  ├─ Data/
 │  └─ Services/
+├─ docker-compose.yml
+├─ .env.example
+├─ .dockerignore
 ├─ AGENTS.md
 └─ README.md
 ```
@@ -145,6 +148,7 @@ FoodLedger_BackEnd_By.Net/
 - .NET Aspire AppHost
 - .NET Aspire ServiceDefaults、OpenTelemetry、Health Checks
 - Dockerfile
+- Docker Compose
 
 ## 本機需求
 
@@ -212,6 +216,92 @@ Swagger UI 僅應在 Development 環境啟用：
 http://localhost:5062/swagger
 https://localhost:7041/swagger
 ```
+
+## 使用 Docker Compose 啟動本機環境
+
+請先依照 `.env.example` 建立本機 `.env`，並調整只屬於本機的資料庫密碼；`.env` 已被 Git 忽略，不應提交。
+
+```powershell
+Copy-Item .\.env.example .\.env
+```
+
+驗證 Docker Compose 設定：
+
+```powershell
+docker compose config --quiet
+```
+
+建置 Web API image：
+
+```powershell
+docker build -f .\FoodLedger\Dockerfile -t foodledger-api:test .
+```
+
+啟動 Web API 與 PostgreSQL：
+
+```powershell
+docker compose up --build
+```
+
+預設 HTTP 入口由 `.env` 的 `FOODLEDGER_API_HTTP_PORT` 控制，範例值為 `5062`。若本機已經有 PostgreSQL 佔用 `5432`，可調整 `.env` 的 `POSTGRES_HOST_PORT`：
+
+```text
+http://localhost:5062/swagger
+```
+
+### 本機部署腳本
+
+本機部署腳本會檢查 Docker CLI、Docker daemon、`.env` 與 `docker-compose.yml`，再以 detached mode 啟動 Web API 與 PostgreSQL。
+
+```powershell
+.\scripts\deploy-local.ps1
+```
+
+若只想重啟既有 image，不重新 build：
+
+```powershell
+.\scripts\deploy-local.ps1 -SkipBuild
+```
+
+停止本機容器：
+
+```powershell
+docker compose down
+```
+
+## Jenkins 本機 Pipeline
+
+本機 Jenkins 可使用根目錄 `Jenkinsfile` 執行 CI 驗證，並在需要時手動觸發本機 Docker Compose 部署。
+
+Jenkins 執行環境需可使用：
+
+```powershell
+git --version
+dotnet --version
+docker --version
+docker compose version
+```
+
+建立 Pipeline Job 時建議設定：
+
+```text
+Pipeline: Pipeline script from SCM
+SCM: Git
+Repository URL: https://github.com/zx32829601/FoodLedger_BackEnd_By.Net
+Credentials: 使用 Jenkins UI 建立的 GitHub PAT credential
+Branch: */chore/add-docker-cicd-flow
+Script Path: Jenkinsfile
+```
+
+`Jenkinsfile` 預設只會執行 restore、build、test 與 `docker compose config --quiet`。Compose 驗證階段會使用 Jenkinsfile 內的 CI-only 範例環境變數，不會使用正式密碼，也不會提交 `.env`。
+
+若要讓 Jenkins 執行本機部署，請在 Build with Parameters 時勾選：
+
+```text
+RUN_LOCAL_DEPLOY=true
+```
+
+執行 Local Deploy 前，Jenkins workspace 需要有 `.env`。`.env` 不應提交到 Git，請在 Jenkins 執行機器上依 `.env.example` 建立並調整本機值；Local Deploy stage 會交由 `scripts/deploy-local.ps1` 讀取 `.env`。
 
 ## 啟動 Aspire AppHost
 
