@@ -603,6 +603,38 @@ public class DailyRecordServiceTests
         Assert.That(await dbContext.DailyRecords.AnyAsync(record => record.RecordId == 1), Is.True);
     }
 
+    /// <summary>
+    /// 驗證刪除不存在的飲食紀錄時，Service 會使用找不到資料語意拒絕並保留同使用者既有資料。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecordAsync_WhenRecordDoesNotExist_ThrowsKeyNotFoundExceptionAndDoesNotDeleteOtherRecords()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.Add(new DailyRecord
+        {
+            RecordId = 1,
+            UserId = CurrentUserId,
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+        });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act & Assert
+        Assert.ThrowsAsync<KeyNotFoundException>(
+            async () => await service.DeleteDailyRecordAsync(999));
+        var originalRecordExists = await dbContext.DailyRecords.AnyAsync(record => record.RecordId == 1);
+        var recordCount = await dbContext.DailyRecords.CountAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(originalRecordExists, Is.True);
+            Assert.That(recordCount, Is.EqualTo(1));
+        });
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
