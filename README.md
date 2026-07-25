@@ -19,10 +19,10 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 
 ### P1：後端分層與核心功能
 
-- [ ] 建立 Service 層架構，避免 Controller 直接放商業邏輯。目前已建立 `DailyRecordService` 新增紀錄切片，支援未登入拒絕、使用目前登入者建立紀錄、拒絕 0 或負數份量紀錄、拒絕無效食物識別碼、拒絕不存在的食物，以及拒絕未來時間紀錄。
+- [ ] 建立 Service 層架構，避免 Controller 直接放商業邏輯。目前已建立 `DailyRecordService` 新增紀錄、依 UTC 日期查詢目前登入使用者紀錄切片，以及刪除目前登入使用者自己的紀錄，支援未登入拒絕、使用目前登入者建立紀錄、拒絕 0 或負數份量紀錄、拒絕無效食物識別碼、拒絕不存在的食物，以及拒絕未來時間紀錄。
 - [ ] 建立 Request / Response DTO，API response 不直接暴露 Entity。
 - [ ] 實作食物查詢 API，支援關鍵字、分類與語系查詢。
-- [ ] 實作每日飲食紀錄 API，支援新增、查詢、修改與刪除自己的紀錄。目前已建立 `POST /api/daily-records` 第一個 Controller 邊界切片，將 Service 欄位範圍錯誤轉為 400 驗證回應、資源不存在錯誤轉為 404 回應，並將未授權錯誤轉為 401 回應。
+- [ ] 實作每日飲食紀錄 API，支援新增、查詢、修改與刪除自己的紀錄。目前已建立 `POST /api/daily-records` 第一個 Controller 邊界切片，將 Service 欄位範圍錯誤轉為 400 驗證回應、資源不存在錯誤轉為 404 回應，並將未授權錯誤轉為 401 回應；也已建立 `DELETE /api/daily-records/{recordId}` 成功刪除時回傳 204 No Content 的 Controller 邊界切片。
 - [ ] 實作營養攝取統計 Service，依每日紀錄彙總熱量與各營養素攝取量。
 - [ ] 補齊一致的錯誤回應格式，避免對外回傳內部 exception detail。
 
@@ -44,11 +44,31 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 為 `DailyRecordService` 餐點份量超過業務上限 `10000` 時拒絕新增並避免寫入資料庫補上 Service 層測試。
 - [x] 為 `DailyRecordService` 餐點份量等於業務上限 `10000` 時允許新增補上 Service 層邊界測試。
 - [x] 為 `DailyRecordService` 食物識別碼為 0 時拒絕新增並避免查詢不存在食物流程補上 Service 層測試。
+- [x] 為 `DailyRecordService` 依 UTC 日期查詢目前登入使用者自己的飲食紀錄補上 Service 層測試。
+- [x] 為 `DailyRecordService` 依 UTC 日期查詢時包含當日開始並排除隔日開始補上 Service 層邊界測試。
+- [x] 為 `DailyRecordService` 依 UTC 日期查詢多筆飲食紀錄時依食用時間由早到晚排序補上 Service 層測試。
+- [x] 為 `DailyRecordService` 依 UTC 日期查詢多筆同食用時間紀錄時依紀錄識別碼排序補上 Service 層測試。
+- [x] 為 `DailyRecordService` 未登入查詢飲食紀錄時拒絕讀取私有資料補上 Service 層測試。
+- [x] 為 `DailyRecordService` 刪除屬於目前登入使用者的飲食紀錄補上 Service 層測試。
+- [x] 為 `DailyRecordService` 未登入刪除飲食紀錄時拒絕操作並保留資料補上 Service 層測試。
+- [x] 為 `DailyRecordService` 嘗試刪除其他使用者飲食紀錄時以找不到資料語意拒絕並保留資料補上 Service 層測試。
+- [x] 為 `DailyRecordService` 刪除不存在的飲食紀錄時以找不到資料語意拒絕並保留同使用者既有資料補上 Service 層測試。
+- [x] 為 `DailyRecordsController` 查詢飲食紀錄成功時呼叫 Service 並回傳 200 OK 補上 Controller 測試。
+- [x] 為 `DailyRecordsController` 查詢飲食紀錄時處理 Service 未授權錯誤並回傳 401 Unauthorized 補上 Controller 測試。
 - [x] 為 `DailyRecordsController` 處理 Service 欄位範圍錯誤並回傳 400 ValidationProblem 補上 Controller 測試。
 - [x] 為 `DailyRecordsController` 成功新增時呼叫 Service 並回傳 204 No Content 補上 Controller 測試。
 - [x] 為 `DailyRecordsController` 處理 Service 資源不存在錯誤並回傳 404 Not Found 補上 Controller 測試。
 - [x] 為 `DailyRecordsController` 處理 Service 未授權錯誤並回傳 401 Unauthorized 補上 Controller 測試。
+- [x] 為 `DailyRecordsController` 成功刪除飲食紀錄時呼叫 Service 並回傳 204 No Content 補上 Controller 測試。
+- [x] 為 `DailyRecordsController` 刪除飲食紀錄時處理 Service 未授權錯誤並回傳 401 Unauthorized 補上 Controller 測試。
+- [x] 為 `DailyRecordsController` 刪除飲食紀錄時處理 Service 資源不存在錯誤並回傳 404 Not Found 補上 Controller 測試。
 - [x] 為 `POST /api/daily-records` 未登入 request 會被授權 middleware 擋下並回傳 401 Unauthorized 補上 API 整合測試。
+- [x] 為 `GET /api/daily-records` 未登入 request 會被授權 middleware 擋下並回傳 401 Unauthorized 補上 API 整合測試。
+- [x] 為 `GET /api/daily-records` 已驗證 request 會通過授權 middleware、綁定查詢日期、呼叫 Service 並回傳 200 OK 補上 API 整合測試。
+- [x] 為 `GET /api/daily-records` 成功 response 會包含可解析且代表同一 UTC 時間點的食用時間補上 API 整合測試。
+- [x] 為 `GET /api/daily-records` 查詢成功但沒有資料時回傳 200 OK 與空陣列補上 API 整合測試。
+- [x] 為 `GET /api/daily-records` 查詢日期格式無效時由 API model binding 回傳 400 並避免進入 Service 補上整合測試。
+- [x] 為 `GET /api/daily-records` 缺少查詢日期時由 API model binding 回傳 400 並避免進入 Service 補上整合測試。
 - [x] 為 `POST /api/daily-records` 已驗證 request 會通過授權 middleware、呼叫 Service 並回傳 204 No Content 補上 API 整合測試。
 - [x] 為 `POST /api/daily-records` 食物識別碼為 0 時由 API model validation 回傳 400 並避免進入 Service 補上整合測試。
 - [x] 為 `POST /api/daily-records` 食用數量為 0 時由 API model validation 回傳 400 並避免進入 Service 補上整合測試。

@@ -55,6 +55,190 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
+    /// 驗證未登入 request 呼叫查詢每日飲食紀錄 API 時，會被 Authorize middleware 擋下並回傳 401 Unauthorized。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenRequestIsAnonymous_ReturnsUnauthorized()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+
+        // Act
+        var response = await client.GetAsync("/api/daily-records?date=2026-07-23");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+            Assert.That(dailyRecordService.WasCalled, Is.False);
+        });
+    }
+
+    /// <summary>
+    /// 驗證已通過驗證的 request 呼叫查詢每日飲食紀錄 API 時，會進入 Service 並回傳 200 OK。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenRequestIsAuthenticated_CallsServiceAndReturnsOk()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        dailyRecordService.RecordsToReturn =
+        [
+            new DailyRecordResponse
+            {
+                RecordId = 1,
+                FoodId = 2,
+                Quantity = 1.5m,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+            },
+        ];
+
+        // Act
+        var response = await client.GetAsync("/api/daily-records?date=2026-07-23");
+
+        // Assert
+        var records = await response.Content.ReadFromJsonAsync<DailyRecordResponse[]>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(dailyRecordService.GetCallCount, Is.EqualTo(1));
+            Assert.That(dailyRecordService.ReceivedDate, Is.EqualTo(new DateOnly(2026, 7, 23)));
+            Assert.That(records, Is.Not.Null);
+            Assert.That(records!, Has.Length.EqualTo(1));
+            Assert.That(records![0].RecordId, Is.EqualTo(1));
+            Assert.That(records[0].FoodId, Is.EqualTo(2));
+            Assert.That(records[0].Quantity, Is.EqualTo(1.5m));
+        });
+    }
+
+    /// <summary>
+    /// 驗證查詢飲食紀錄成功時，API response 會包含可解析且代表同一 UTC 時間點的食用時間。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenRequestIsAuthenticated_ReturnsConsumedAtInResponse()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var expectedConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero);
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        dailyRecordService.RecordsToReturn =
+        [
+            new DailyRecordResponse
+            {
+                RecordId = 1,
+                FoodId = 2,
+                Quantity = 1.5m,
+                ConsumedAt = expectedConsumedAt,
+            },
+        ];
+
+        // Act
+        var response = await client.GetAsync("/api/daily-records?date=2026-07-23");
+
+        // Assert
+        await using var responseStream = await response.Content.ReadAsStreamAsync();
+        using var records = await JsonDocument.ParseAsync(responseStream);
+        var consumedAt = records.RootElement[0].GetProperty("consumedAt").GetDateTimeOffset();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(consumedAt.ToUniversalTime(), Is.EqualTo(expectedConsumedAt));
+        });
+    }
+
+    /// <summary>
+    /// 驗證查詢飲食紀錄沒有資料時，API 會回傳 200 OK 與空陣列。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenServiceReturnsNoRecords_ReturnsOkWithEmptyArray()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+
+        // Act
+        var response = await client.GetAsync("/api/daily-records?date=2026-07-23");
+
+        // Assert
+        await using var responseStream = await response.Content.ReadAsStreamAsync();
+        using var records = await JsonDocument.ParseAsync(responseStream);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(records.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
+            Assert.That(records.RootElement.GetArrayLength(), Is.EqualTo(0));
+            Assert.That(dailyRecordService.GetCallCount, Is.EqualTo(1));
+        });
+    }
+
+    /// <summary>
+    /// 驗證已驗證 request 的查詢日期格式無效時，API 會由模型綁定回傳 400 且不進入 Service。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenDateQueryIsInvalid_ReturnsBadRequestAndDoesNotCallService()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+
+        // Act
+        var response = await client.GetAsync("/api/daily-records?date=not-a-date");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(dailyRecordService.WasCalled, Is.False);
+        });
+    }
+
+    /// <summary>
+    /// 驗證已驗證 request 缺少查詢日期時，API 會由模型綁定回傳 400 且不進入 Service。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenDateQueryIsMissing_ReturnsBadRequestAndDoesNotCallService()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+
+        // Act
+        var response = await client.GetAsync("/api/daily-records");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(dailyRecordService.WasCalled, Is.False);
+        });
+    }
+
+    /// <summary>
     /// 驗證已通過驗證的 request 呼叫新增每日飲食紀錄 API 時，會進入 Service 並回傳 204 No Content。
     /// </summary>
     [Test]
@@ -415,9 +599,15 @@ public class DailyRecordsApiAuthorizationTests
     {
         public int CallCount { get; private set; }
 
+        public int GetCallCount { get; private set; }
+
         public bool WasCalled { get; private set; }
 
         public CreateDailyRecordRequest? ReceivedRequest { get; private set; }
+
+        public DateOnly? ReceivedDate { get; private set; }
+
+        public IReadOnlyList<DailyRecordResponse> RecordsToReturn { get; set; } = [];
 
         public Task CreateDailyRecordAsync(
             CreateDailyRecordRequest request,
@@ -426,6 +616,24 @@ public class DailyRecordsApiAuthorizationTests
             CallCount++;
             WasCalled = true;
             ReceivedRequest = request;
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<DailyRecordResponse>> GetDailyRecordsAsync(
+            DateOnly date,
+            CancellationToken cancellationToken = default)
+        {
+            GetCallCount++;
+            WasCalled = true;
+            ReceivedDate = date;
+            return Task.FromResult(RecordsToReturn);
+        }
+
+        public Task DeleteDailyRecordAsync(
+            long recordId,
+            CancellationToken cancellationToken = default)
+        {
+            WasCalled = true;
             return Task.CompletedTask;
         }
     }

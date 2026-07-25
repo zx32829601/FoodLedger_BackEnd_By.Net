@@ -79,4 +79,58 @@ public sealed class DailyRecordService : IDailyRecordService
         _dbContext.DailyRecords.Add(dailyRecord);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<DailyRecordResponse>> GetDailyRecordsAsync(
+        DateOnly date,
+        CancellationToken cancellationToken = default)
+    {
+        if (_currentUserService.UserId is not { } currentUserId)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var startAt = new DateTimeOffset(date, TimeOnly.MinValue, TimeSpan.Zero);
+        var endAt = startAt.AddDays(1);
+
+        return await _dbContext.DailyRecords
+            .Where(record =>
+                record.UserId == currentUserId
+                && record.ConsumedAt >= startAt
+                && record.ConsumedAt < endAt)
+            .OrderBy(record => record.ConsumedAt)
+            .ThenBy(record => record.RecordId)
+            .Select(record => new DailyRecordResponse
+            {
+                RecordId = record.RecordId,
+                FoodId = record.FoodId,
+                Quantity = record.Quantity,
+                ConsumedAt = record.ConsumedAt,
+            })
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteDailyRecordAsync(
+        long recordId,
+        CancellationToken cancellationToken = default)
+    {
+        if (_currentUserService.UserId is not { } currentUserId)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var dailyRecord = await _dbContext.DailyRecords
+            .FirstOrDefaultAsync(record =>
+                record.RecordId == recordId
+                && record.UserId == currentUserId,
+                cancellationToken);
+        if (dailyRecord is null)
+        {
+            throw new KeyNotFoundException($"DailyRecord {recordId} does not exist.");
+        }
+
+        _dbContext.DailyRecords.Remove(dailyRecord);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

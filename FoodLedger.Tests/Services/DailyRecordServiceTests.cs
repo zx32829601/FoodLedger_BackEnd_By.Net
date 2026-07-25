@@ -320,6 +320,321 @@ public class DailyRecordServiceTests
         Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
     }
 
+    /// <summary>
+    /// 驗證依日期查詢飲食紀錄時，Service 只會回傳目前登入使用者在指定 UTC 日期內的資料。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecordsAsync_WhenCurrentUserHasRecordsOnDate_ReturnsOnlyThatUsersRecordsForDate()
+    {
+        // Arrange
+        var targetDate = new DateOnly(2026, 7, 23);
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.AddRange(
+            new DailyRecord
+            {
+                RecordId = 1,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1.5m,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+            },
+            new DailyRecord
+            {
+                RecordId = 2,
+                UserId = 99,
+                FoodId = 1,
+                Quantity = 2,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 13, 0, 0, TimeSpan.Zero),
+            },
+            new DailyRecord
+            {
+                RecordId = 3,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 3,
+                ConsumedAt = new DateTimeOffset(2026, 7, 24, 12, 0, 0, TimeSpan.Zero),
+            });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act
+        var records = await service.GetDailyRecordsAsync(targetDate);
+
+        // Assert
+        var dailyRecord = records.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(dailyRecord.RecordId, Is.EqualTo(1));
+            Assert.That(dailyRecord.FoodId, Is.EqualTo(1));
+            Assert.That(dailyRecord.Quantity, Is.EqualTo(1.5m));
+            Assert.That(dailyRecord.ConsumedAt, Is.EqualTo(new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero)));
+        });
+    }
+
+    /// <summary>
+    /// 驗證依日期查詢飲食紀錄時，Service 會包含當日開始並排除隔日開始的邊界資料。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecordsAsync_WhenRecordsAreOnDateBoundaries_IncludesStartAndExcludesNextDayStart()
+    {
+        // Arrange
+        var targetDate = new DateOnly(2026, 7, 23);
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.AddRange(
+            new DailyRecord
+            {
+                RecordId = 1,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 0, 0, 0, TimeSpan.Zero),
+            },
+            new DailyRecord
+            {
+                RecordId = 2,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 23, 59, 59, TimeSpan.Zero),
+            },
+            new DailyRecord
+            {
+                RecordId = 3,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = new DateTimeOffset(2026, 7, 24, 0, 0, 0, TimeSpan.Zero),
+            });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act
+        var records = await service.GetDailyRecordsAsync(targetDate);
+
+        // Assert
+        Assert.That(records.Select(record => record.RecordId), Is.EqualTo(new[] { 1, 2 }));
+    }
+
+    /// <summary>
+    /// 驗證同一天有多筆飲食紀錄時，Service 會依食用時間由早到晚回傳穩定順序。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecordsAsync_WhenCurrentUserHasMultipleRecordsOnDate_ReturnsRecordsOrderedByConsumedAt()
+    {
+        // Arrange
+        var targetDate = new DateOnly(2026, 7, 23);
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.AddRange(
+            new DailyRecord
+            {
+                RecordId = 1,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 18, 0, 0, TimeSpan.Zero),
+            },
+            new DailyRecord
+            {
+                RecordId = 2,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 8, 0, 0, TimeSpan.Zero),
+            },
+            new DailyRecord
+            {
+                RecordId = 3,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+            });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act
+        var records = await service.GetDailyRecordsAsync(targetDate);
+
+        // Assert
+        Assert.That(records.Select(record => record.RecordId), Is.EqualTo(new[] { 2, 3, 1 }));
+    }
+
+    /// <summary>
+    /// 驗證食用時間完全相同時，Service 會再依飲食紀錄識別碼由小到大回傳穩定順序。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecordsAsync_WhenRecordsHaveSameConsumedAt_ReturnsRecordsOrderedByRecordId()
+    {
+        // Arrange
+        var targetDate = new DateOnly(2026, 7, 23);
+        var consumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero);
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.AddRange(
+            new DailyRecord
+            {
+                RecordId = 3,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = consumedAt,
+            },
+            new DailyRecord
+            {
+                RecordId = 1,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = consumedAt,
+            },
+            new DailyRecord
+            {
+                RecordId = 2,
+                UserId = CurrentUserId,
+                FoodId = 1,
+                Quantity = 1,
+                ConsumedAt = consumedAt,
+            });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act
+        var records = await service.GetDailyRecordsAsync(targetDate);
+
+        // Assert
+        Assert.That(records.Select(record => record.RecordId), Is.EqualTo(new[] { 1, 2, 3 }));
+    }
+
+    /// <summary>
+    /// 驗證未登入使用者查詢飲食紀錄時，Service 會拒絕讀取私有資料。
+    /// </summary>
+    [Test]
+    public void GetDailyRecordsAsync_WhenCurrentUserIsMissing_ThrowsUnauthorizedAccessException()
+    {
+        // Arrange
+        using var dbContext = CreateDbContext();
+        var currentUserService = new TestCurrentUserService { UserId = null };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act & Assert
+        Assert.ThrowsAsync<UnauthorizedAccessException>(
+            async () => await service.GetDailyRecordsAsync(new DateOnly(2026, 7, 23)));
+    }
+
+    /// <summary>
+    /// 驗證刪除屬於目前登入使用者的飲食紀錄時，Service 會從資料庫移除該筆資料。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecordAsync_WhenRecordBelongsToCurrentUser_RemovesRecord()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.Add(new DailyRecord
+        {
+            RecordId = 1,
+            UserId = CurrentUserId,
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+        });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act
+        await service.DeleteDailyRecordAsync(1);
+
+        // Assert
+        Assert.That(await dbContext.DailyRecords.AnyAsync(record => record.RecordId == 1), Is.False);
+    }
+
+    /// <summary>
+    /// 驗證未登入使用者刪除飲食紀錄時，Service 會拒絕操作並保留既有資料。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecordAsync_WhenCurrentUserIsMissing_ThrowsUnauthorizedAccessExceptionAndDoesNotDeleteRecord()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.Add(new DailyRecord
+        {
+            RecordId = 1,
+            UserId = CurrentUserId,
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+        });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = null };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act & Assert
+        Assert.ThrowsAsync<UnauthorizedAccessException>(
+            async () => await service.DeleteDailyRecordAsync(1));
+        Assert.That(await dbContext.DailyRecords.AnyAsync(record => record.RecordId == 1), Is.True);
+    }
+
+    /// <summary>
+    /// 驗證目前登入使用者嘗試刪除其他使用者的飲食紀錄時，Service 會使用找不到資料語意拒絕並保留資料。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecordAsync_WhenRecordBelongsToAnotherUser_ThrowsKeyNotFoundExceptionAndDoesNotDeleteRecord()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.Add(new DailyRecord
+        {
+            RecordId = 1,
+            UserId = 99,
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+        });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act & Assert
+        Assert.ThrowsAsync<KeyNotFoundException>(
+            async () => await service.DeleteDailyRecordAsync(1));
+        Assert.That(await dbContext.DailyRecords.AnyAsync(record => record.RecordId == 1), Is.True);
+    }
+
+    /// <summary>
+    /// 驗證刪除不存在的飲食紀錄時，Service 會使用找不到資料語意拒絕並保留同使用者既有資料。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecordAsync_WhenRecordDoesNotExist_ThrowsKeyNotFoundExceptionAndDoesNotDeleteOtherRecords()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        dbContext.DailyRecords.Add(new DailyRecord
+        {
+            RecordId = 1,
+            UserId = CurrentUserId,
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
+        });
+        await dbContext.SaveChangesAsync();
+        var currentUserService = new TestCurrentUserService { UserId = CurrentUserId };
+        var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
+
+        // Act & Assert
+        Assert.ThrowsAsync<KeyNotFoundException>(
+            async () => await service.DeleteDailyRecordAsync(999));
+        var originalRecordExists = await dbContext.DailyRecords.AnyAsync(record => record.RecordId == 1);
+        var recordCount = await dbContext.DailyRecords.CountAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(originalRecordExists, Is.True);
+            Assert.That(recordCount, Is.EqualTo(1));
+        });
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()

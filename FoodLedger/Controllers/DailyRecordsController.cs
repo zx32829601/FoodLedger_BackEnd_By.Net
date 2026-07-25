@@ -2,6 +2,7 @@ using FoodLedger.DTOs.DailyRecords;
 using FoodLedger.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace FoodLedger.Controllers;
 
@@ -26,6 +27,41 @@ public sealed class DailyRecordsController : ControllerBase
     public DailyRecordsController(IDailyRecordService dailyRecordService)
     {
         _dailyRecordService = dailyRecordService;
+    }
+
+    /// <summary>
+    /// 查詢目前登入使用者在指定 UTC 日期內的每日飲食紀錄。
+    /// </summary>
+    /// <param name="date">要查詢的 UTC 日期，格式建議使用 <c>yyyy-MM-dd</c>。</param>
+    /// <param name="cancellationToken">取消目前 HTTP request 的通知權杖。</param>
+    /// <returns>查詢成功時回傳 <c>200 OK</c> 與飲食紀錄清單。</returns>
+    /// <remarks>
+    /// 實際可查詢的使用者由登入狀態與 <see cref="IDailyRecordService" /> 決定，前端不需也不應提供 UserId。
+    /// </remarks>
+    /// <example>
+    /// Request:
+    /// <code>
+    /// GET /api/daily-records?date=2026-07-23
+    /// Authorization: Bearer {accessToken}
+    /// </code>
+    /// </example>
+    [HttpGet]
+    [ProducesResponseType(typeof(IReadOnlyList<DailyRecordResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetDailyRecords(
+        [FromQuery, BindRequired] DateOnly date,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var records = await _dailyRecordService.GetDailyRecordsAsync(date, cancellationToken);
+            return Ok(records);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
     }
 
     /// <summary>
@@ -78,6 +114,46 @@ public sealed class DailyRecordsController : ControllerBase
         catch (UnauthorizedAccessException)
         {
             return Unauthorized();
+        }
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// 刪除目前登入使用者的一筆每日飲食紀錄。
+    /// </summary>
+    /// <param name="recordId">要刪除的每日飲食紀錄識別碼。</param>
+    /// <param name="cancellationToken">取消目前 HTTP request 的通知權杖。</param>
+    /// <returns>刪除成功時回傳 <c>204 No Content</c>。</returns>
+    /// <remarks>
+    /// 實際可刪除的資料由登入狀態與 <see cref="IDailyRecordService" /> 決定，前端不需也不應提供 UserId。
+    /// </remarks>
+    /// <example>
+    /// Request:
+    /// <code>
+    /// DELETE /api/daily-records/1
+    /// Authorization: Bearer {accessToken}
+    /// </code>
+    /// </example>
+    [HttpDelete("{recordId:long}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(
+        long recordId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _dailyRecordService.DeleteDailyRecordAsync(recordId, cancellationToken);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
         }
 
         return NoContent();
