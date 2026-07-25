@@ -99,6 +99,32 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
+    /// 驗證已通過驗證的 request 呼叫刪除每日飲食紀錄 API 時，會進入 Service 並回傳 204 No Content。
+    /// </summary>
+    [Test]
+    public async Task DeleteDailyRecord_WhenRequestIsAuthenticated_CallsServiceAndReturnsNoContent()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+
+        // Act
+        var response = await client.DeleteAsync("/api/daily-records/1");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            Assert.That(dailyRecordService.DeleteCallCount, Is.EqualTo(1));
+            Assert.That(dailyRecordService.ReceivedDeleteRecordId, Is.EqualTo(1));
+        });
+    }
+
+    /// <summary>
     /// 驗證已通過驗證的 request 呼叫查詢每日飲食紀錄 API 時，會進入 Service 並回傳 200 OK。
     /// </summary>
     [Test]
@@ -623,11 +649,15 @@ public class DailyRecordsApiAuthorizationTests
 
         public int GetCallCount { get; private set; }
 
+        public int DeleteCallCount { get; private set; }
+
         public bool WasCalled { get; private set; }
 
         public CreateDailyRecordRequest? ReceivedRequest { get; private set; }
 
         public DateOnly? ReceivedDate { get; private set; }
+
+        public long? ReceivedDeleteRecordId { get; private set; }
 
         public IReadOnlyList<DailyRecordResponse> RecordsToReturn { get; set; } = [];
 
@@ -655,7 +685,9 @@ public class DailyRecordsApiAuthorizationTests
             long recordId,
             CancellationToken cancellationToken = default)
         {
+            DeleteCallCount++;
             WasCalled = true;
+            ReceivedDeleteRecordId = recordId;
             return Task.CompletedTask;
         }
     }
