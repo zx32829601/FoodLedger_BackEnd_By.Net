@@ -282,6 +282,8 @@ docker --version
 docker compose version
 ```
 
+若 Jenkins 以 Windows service 執行，服務帳號的 PATH 可能不同於目前登入使用者。`Jenkinsfile` 會透過 `DOCKER_CLI_BIN` 參數補入 Docker Desktop CLI 路徑；若仍出現 `docker : The term 'docker' is not recognized`，請確認 Docker Desktop 已安裝，並讓 Jenkins service 帳號可存取 `C:\Program Files\Docker\Docker\resources\bin` 或使用者安裝路徑 `C:\Users\<UserName>\AppData\Local\Programs\DockerDesktop\resources\bin`。調整 Jenkins service 環境變數後需要重新啟動 Jenkins。
+
 建立 Pipeline Job 時建議設定：
 
 ```text
@@ -300,6 +302,14 @@ Script Path: Jenkinsfile
 ```text
 RUN_LOCAL_DEPLOY=true
 ```
+
+`DOCKER_CLI_BIN` 預設為本機 Docker Desktop 使用者安裝路徑：
+
+```text
+C:\Users\zx328\AppData\Local\Programs\DockerDesktop\resources\bin
+```
+
+若 Docker Desktop 安裝在其他位置，請在 Build with Parameters 時改成實際包含 `docker.exe` 的資料夾。
 
 執行 Local Deploy 前，Jenkins workspace 需要有 `.env`。`.env` 不應提交到 Git，請在 Jenkins 執行機器上依 `.env.example` 建立並調整本機值；Local Deploy stage 會交由 `scripts/deploy-local.ps1` 讀取 `.env`。
 
