@@ -69,7 +69,7 @@ try {
     Write-Step "Check Docker CLI"
     Ensure-DockerCli
     docker --version
-    & $ComposeScriptPath version
+    & $ComposeScriptPath -ArgumentList @("version")
 
     Write-Step "Check Docker daemon"
     docker info --format "{{.ServerVersion}}" | Out-Null
@@ -78,18 +78,18 @@ try {
     Ensure-LocalEnvFile
 
     Write-Step "Validate docker-compose.yml"
-    & $ComposeScriptPath config --quiet
+    & $ComposeScriptPath -ArgumentList @("config", "--quiet")
 
     Write-Step "Start local deployment"
     if ($SkipBuild) {
-        & $ComposeScriptPath up -d
+        & $ComposeScriptPath -ArgumentList @("up", "--detach", "--remove-orphans")
     }
     else {
-        & $ComposeScriptPath up --build -d
+        & $ComposeScriptPath -ArgumentList @("up", "--build", "--detach", "--remove-orphans")
     }
 
     Write-Step "Show container status"
-    & $ComposeScriptPath ps
+    & $ComposeScriptPath -ArgumentList @("ps")
 
     $apiHttpPort = Get-ApiHttpPort
     Write-Host ""
