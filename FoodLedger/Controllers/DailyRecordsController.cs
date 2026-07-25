@@ -138,6 +138,7 @@ public sealed class DailyRecordsController : ControllerBase
     [HttpDelete("{recordId:long}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(
         long recordId,
         CancellationToken cancellationToken = default)
@@ -149,6 +150,10 @@ public sealed class DailyRecordsController : ControllerBase
         catch (UnauthorizedAccessException)
         {
             return Unauthorized();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
         }
 
         return NoContent();

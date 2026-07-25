@@ -215,6 +215,24 @@ public class DailyRecordsControllerTests
         Assert.That(result, Is.TypeOf<UnauthorizedResult>());
     }
 
+    /// <summary>
+    /// 驗證刪除飲食紀錄時 Service 回報指定資源不存在，Controller 會轉成 404 Not Found。
+    /// </summary>
+    [Test]
+    public async Task Delete_WhenServiceThrowsKeyNotFoundException_ReturnsNotFound()
+    {
+        // Arrange
+        var dailyRecordService = new ThrowingDailyRecordService(
+            new KeyNotFoundException("DailyRecord 999 does not exist."));
+        var controller = new DailyRecordsController(dailyRecordService);
+
+        // Act
+        var result = await controller.Delete(999, CancellationToken.None);
+
+        // Assert
+        Assert.That(result, Is.InstanceOf<NotFoundResult>());
+    }
+
     private sealed class RecordingDailyRecordService : IDailyRecordService
     {
         public CreateDailyRecordRequest? ReceivedRequest { get; private set; }
