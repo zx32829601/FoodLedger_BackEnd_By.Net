@@ -64,6 +64,7 @@ FoodLedger 是一套飲食紀錄與營養管理系統，目標是協助使用者
 - [x] 為 `DailyRecordsController` 刪除飲食紀錄時處理 Service 資源不存在錯誤並回傳 404 Not Found 補上 Controller 測試。
 - [x] 為 `POST /api/daily-records` 未登入 request 會被授權 middleware 擋下並回傳 401 Unauthorized 補上 API 整合測試。
 - [x] 為 `GET /api/daily-records` 未登入 request 會被授權 middleware 擋下並回傳 401 Unauthorized 補上 API 整合測試。
+- [x] 為 `DELETE /api/daily-records/{recordId}` 未登入 request 會被授權 middleware 擋下並回傳 401 Unauthorized 補上 API 整合測試。
 - [x] 為 `GET /api/daily-records` 已驗證 request 會通過授權 middleware、綁定查詢日期、呼叫 Service 並回傳 200 OK 補上 API 整合測試。
 - [x] 為 `GET /api/daily-records` 成功 response 會包含可解析且代表同一 UTC 時間點的食用時間補上 API 整合測試。
 - [x] 為 `GET /api/daily-records` 查詢成功但沒有資料時回傳 200 OK 與空陣列補上 API 整合測試。
