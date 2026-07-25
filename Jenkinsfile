@@ -5,10 +5,14 @@ pipeline {
         skipDefaultCheckout(true)
     }
 
+    triggers {
+        pollSCM('H/2 * * * *')
+    }
+
     parameters {
         booleanParam(
             name: 'RUN_LOCAL_DEPLOY',
-            defaultValue: false,
+            defaultValue: true,
             description: 'Run local docker compose deployment after validation.'
         )
         string(
