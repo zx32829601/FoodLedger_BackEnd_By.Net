@@ -36,7 +36,7 @@ pipeline {
                 withEnv(["PATH=${params.DOCKER_CLI_BIN};${env.DOCKER_DESKTOP_MACHINE_BIN};${env.DOCKER_DESKTOP_USER_BIN};${env.PATH}"]) {
                     powershell 'dotnet --version'
                     powershell 'docker --version'
-                    powershell "& './scripts/Invoke-DockerCompose.ps1' version"
+                    powershell "& './scripts/Invoke-DockerCompose.ps1' -ArgumentList @('version')"
                 }
             }
         }
@@ -69,7 +69,7 @@ pipeline {
                     'POSTGRES_HOST_PORT=5432',
                     'FOODLEDGER_API_HTTP_PORT=5062'
                 ]) {
-                    powershell "& './scripts/Invoke-DockerCompose.ps1' config --quiet"
+                    powershell "& './scripts/Invoke-DockerCompose.ps1' -ArgumentList @('config', '--quiet')"
                 }
             }
         }
@@ -81,8 +81,10 @@ pipeline {
                 }
             }
             steps {
-                withEnv(["PATH=${params.DOCKER_CLI_BIN};${env.DOCKER_DESKTOP_MACHINE_BIN};${env.DOCKER_DESKTOP_USER_BIN};${env.PATH}"]) {
-                    powershell "& './scripts/deploy-local.ps1'"
+                timeout(time: 10, unit: 'MINUTES') {
+                    withEnv(["PATH=${params.DOCKER_CLI_BIN};${env.DOCKER_DESKTOP_MACHINE_BIN};${env.DOCKER_DESKTOP_USER_BIN};${env.PATH}"]) {
+                        powershell "& './scripts/deploy-local.ps1'"
+                    }
                 }
             }
         }

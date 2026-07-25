@@ -286,6 +286,8 @@ docker compose version
 
 Jenkins 與本機部署腳本會透過 `scripts\Invoke-DockerCompose.ps1` 執行 Compose 指令，優先使用 `docker-compose.exe`，若找不到才改用 `docker compose`。這可避免 Windows Jenkins service 找得到 `docker.exe` 但無法載入 Compose plugin 時，出現 `docker: unknown command: docker compose`。
 
+Local Deploy stage 只負責執行 detached 模式的 Docker Compose 部署，啟動完成後 Jenkins job 應結束，後端監聽會交由 Docker container 持續執行。若 Local Deploy 超過 10 分鐘未結束，Jenkins 會將該次建置視為失敗，避免 pipeline 無限等待。
+
 建立 Pipeline Job 時建議設定：
 
 ```text
