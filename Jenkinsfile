@@ -37,7 +37,7 @@ pipeline {
                     powershell '''
                         dotnet --version
                         docker --version
-                        docker compose version
+                        .\scripts\Invoke-DockerCompose.ps1 version
                     '''
                 }
             }
@@ -71,7 +71,7 @@ pipeline {
                     'POSTGRES_HOST_PORT=5432',
                     'FOODLEDGER_API_HTTP_PORT=5062'
                 ]) {
-                    powershell 'docker compose config --quiet'
+                    powershell '.\\scripts\\Invoke-DockerCompose.ps1 config --quiet'
                 }
             }
         }

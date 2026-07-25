@@ -8,6 +8,7 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $EnvPath = Join-Path $RepoRoot ".env"
 $DockerDesktopBinPath = Join-Path $env:LOCALAPPDATA "Programs\DockerDesktop\resources\bin"
+$ComposeScriptPath = Join-Path $PSScriptRoot "Invoke-DockerCompose.ps1"
 $DefaultApiHttpPort = "5062"
 
 function Write-Step {
@@ -68,7 +69,7 @@ try {
     Write-Step "Check Docker CLI"
     Ensure-DockerCli
     docker --version
-    docker compose version
+    & $ComposeScriptPath version
 
     Write-Step "Check Docker daemon"
     docker info --format "{{.ServerVersion}}" | Out-Null
@@ -77,18 +78,18 @@ try {
     Ensure-LocalEnvFile
 
     Write-Step "Validate docker-compose.yml"
-    docker compose config --quiet
+    & $ComposeScriptPath config --quiet
 
     Write-Step "Start local deployment"
     if ($SkipBuild) {
-        docker compose up -d
+        & $ComposeScriptPath up -d
     }
     else {
-        docker compose up --build -d
+        & $ComposeScriptPath up --build -d
     }
 
     Write-Step "Show container status"
-    docker compose ps
+    & $ComposeScriptPath ps
 
     $apiHttpPort = Get-ApiHttpPort
     Write-Host ""

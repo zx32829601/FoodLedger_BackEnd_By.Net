@@ -284,6 +284,8 @@ docker compose version
 
 若 Jenkins 以 Windows service 執行，服務帳號的 PATH 可能不同於目前登入使用者。`Jenkinsfile` 會透過 `DOCKER_CLI_BIN` 參數補入 Docker Desktop CLI 路徑；若仍出現 `docker : The term 'docker' is not recognized`，請確認 Docker Desktop 已安裝，並讓 Jenkins service 帳號可存取 `C:\Program Files\Docker\Docker\resources\bin` 或使用者安裝路徑 `C:\Users\<UserName>\AppData\Local\Programs\DockerDesktop\resources\bin`。調整 Jenkins service 環境變數後需要重新啟動 Jenkins。
 
+Jenkins 與本機部署腳本會透過 `scripts\Invoke-DockerCompose.ps1` 執行 Compose 指令，優先使用 `docker-compose.exe`，若找不到才改用 `docker compose`。這可避免 Windows Jenkins service 找得到 `docker.exe` 但無法載入 Compose plugin 時，出現 `docker: unknown command: docker compose`。
+
 建立 Pipeline Job 時建議設定：
 
 ```text
