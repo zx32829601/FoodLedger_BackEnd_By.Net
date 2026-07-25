@@ -174,6 +174,30 @@ public class DailyRecordsControllerTests
         Assert.That(result, Is.TypeOf<UnauthorizedResult>());
     }
 
+    /// <summary>
+    /// 驗證刪除飲食紀錄 request 有效時，Controller 會將紀錄識別碼與取消權杖交給 Service，並回傳 204 No Content。
+    /// </summary>
+    [Test]
+    public async Task Delete_WhenRequestIsValid_CallsServiceAndReturnsNoContent()
+    {
+        // Arrange
+        var dailyRecordService = new RecordingDailyRecordService();
+        var controller = new DailyRecordsController(dailyRecordService);
+        using var cancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = cancellationTokenSource.Token;
+
+        // Act
+        var result = await controller.Delete(1, cancellationToken);
+
+        // Assert
+        Assert.That(result, Is.TypeOf<NoContentResult>());
+        Assert.Multiple(() =>
+        {
+            Assert.That(dailyRecordService.ReceivedDeleteRecordId, Is.EqualTo(1));
+            Assert.That(dailyRecordService.ReceivedDeleteCancellationToken, Is.EqualTo(cancellationToken));
+        });
+    }
+
     private sealed class RecordingDailyRecordService : IDailyRecordService
     {
         public CreateDailyRecordRequest? ReceivedRequest { get; private set; }
@@ -183,6 +207,10 @@ public class DailyRecordsControllerTests
         public DateOnly? ReceivedDate { get; private set; }
 
         public CancellationToken ReceivedGetCancellationToken { get; private set; }
+
+        public long? ReceivedDeleteRecordId { get; private set; }
+
+        public CancellationToken ReceivedDeleteCancellationToken { get; private set; }
 
         public IReadOnlyList<DailyRecordResponse> RecordsToReturn { get; init; } = [];
 
@@ -208,6 +236,8 @@ public class DailyRecordsControllerTests
             long recordId,
             CancellationToken cancellationToken = default)
         {
+            ReceivedDeleteRecordId = recordId;
+            ReceivedDeleteCancellationToken = cancellationToken;
             return Task.CompletedTask;
         }
     }

@@ -118,4 +118,31 @@ public sealed class DailyRecordsController : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// 刪除目前登入使用者的一筆每日飲食紀錄。
+    /// </summary>
+    /// <param name="recordId">要刪除的每日飲食紀錄識別碼。</param>
+    /// <param name="cancellationToken">取消目前 HTTP request 的通知權杖。</param>
+    /// <returns>刪除成功時回傳 <c>204 No Content</c>。</returns>
+    /// <remarks>
+    /// 實際可刪除的資料由登入狀態與 <see cref="IDailyRecordService" /> 決定，前端不需也不應提供 UserId。
+    /// </remarks>
+    /// <example>
+    /// Request:
+    /// <code>
+    /// DELETE /api/daily-records/1
+    /// Authorization: Bearer {accessToken}
+    /// </code>
+    /// </example>
+    [HttpDelete("{recordId:long}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Delete(
+        long recordId,
+        CancellationToken cancellationToken = default)
+    {
+        await _dailyRecordService.DeleteDailyRecordAsync(recordId, cancellationToken);
+        return NoContent();
+    }
 }
