@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required. Copy .env.example to .env and adjust local values.}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required. Copy .env.example to .env and adjust local values.}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required. Copy .env.example to .env and adjust local values.}
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - foodledger-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  foodledger-api:
+    build:
+      context: .
+      dockerfile: FoodLedger/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:?POSTGRES_DB is required.};Username=${POSTGRES_USER:?POSTGRES_USER is required.};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required.}
+    ports:
+      - "${FOODLEDGER_API_HTTP_PORT:-5062}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  foodledger-postgres-data:
