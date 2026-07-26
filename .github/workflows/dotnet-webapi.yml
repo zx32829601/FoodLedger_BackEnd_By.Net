@@ -35,7 +35,7 @@ jobs:
           POSTGRES_PASSWORD: ci-only-password
           FOODLEDGER_API_HTTP_PORT: 5062
           ASPNETCORE_ENVIRONMENT: Production
-          FOODLEDGER_CORS_ALLOWED_ORIGIN: http://localhost:8080
+          FOODLEDGER_CORS_ALLOWED_ORIGIN: http://localhost:8180
 
       - name: Build Docker image
         run: docker build -f FoodLedger/Dockerfile -t foodledger-api:test .
