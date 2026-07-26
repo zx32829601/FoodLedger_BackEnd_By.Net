@@ -23,6 +23,10 @@ public class AuthApiTests
     // 以下路徑與密碼皆為 Auth API 整合測試使用的固定值，不代表正式環境憑證。
     private const string RegisterPath = "/api/auth/register";
     private const string LoginPath = "/api/auth/login";
+    private const string CookieLoginPath = "/api/auth/login?useCookies=true";
+    private const string LogoutPath = "/api/auth/logout";
+    private const string AntiforgeryPath = "/api/auth/antiforgery";
+    private const string AntiforgeryHeaderName = "X-CSRF-TOKEN";
     private const string CurrentUserPath = "/api/users/me";
     private const string ValidPassword = "Password1";
     private const string InvalidPassword = "WrongPassword1";
@@ -437,6 +441,137 @@ public class AuthApiTests
     }
 
     /// <summary>
+    /// 驗證 Web 登入選擇 Cookie 模式後，後續 request 不需 Bearer Token 即可取得目前使用者。
+    /// </summary>
+    [Test]
+    public async Task Login_WhenCookieModeIsRequested_AuthenticatesSubsequentRequestWithCookie()
+    {
+        // 準備
+        await using var factory = new AuthApiFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"),
+            HandleCookies = true,
+        });
+        await client.PostAsJsonAsync(
+            RegisterPath,
+            new
+            {
+                UserAccount = "cookie_user",
+                DisplayName = "Cookie 使用者",
+                Email = "cookie@example.com",
+                Password = ValidPassword,
+            });
+        await AddAntiforgeryTokenAsync(client);
+
+        // 執行
+        var loginResponse = await client.PostAsJsonAsync(
+            CookieLoginPath,
+            new
+            {
+                LoginId = "cookie_user",
+                Password = ValidPassword,
+            });
+        var currentUserResponse = await client.GetAsync(CurrentUserPath);
+
+        // 驗證
+        var currentUser = await currentUserResponse.Content
+            .ReadFromJsonAsync<CurrentUserResponse>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(
+                loginResponse.Headers.TryGetValues("Set-Cookie", out var cookies),
+                Is.True);
+            Assert.That(
+                (cookies ?? []).Select(cookie => cookie.ToLowerInvariant()),
+                Has.Some.Contains("httponly").And.Contains("secure").And.Contains("samesite=lax"));
+            Assert.That(currentUserResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(currentUser?.UserAccount, Is.EqualTo("cookie_user"));
+        });
+    }
+
+    /// <summary>
+    /// 驗證 Web 使用者登出後，原本的 Identity Cookie 不再通過授權。
+    /// </summary>
+    [Test]
+    public async Task Logout_WhenCookieUserIsAuthenticated_InvalidatesCookieSession()
+    {
+        // 準備
+        await using var factory = new AuthApiFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"),
+            HandleCookies = true,
+        });
+        await client.PostAsJsonAsync(
+            RegisterPath,
+            new
+            {
+                UserAccount = "logout_user",
+                DisplayName = "登出使用者",
+                Email = "logout@example.com",
+                Password = ValidPassword,
+            });
+        await AddAntiforgeryTokenAsync(client);
+        await client.PostAsJsonAsync(
+            CookieLoginPath,
+            new
+            {
+                LoginId = "logout_user",
+                Password = ValidPassword,
+            });
+        await AddAntiforgeryTokenAsync(client);
+
+        // 執行
+        var logoutResponse = await client.PostAsync(LogoutPath, content: null);
+        var currentUserResponse = await client.GetAsync(CurrentUserPath);
+
+        // 驗證
+        Assert.Multiple(() =>
+        {
+            Assert.That(logoutResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            Assert.That(currentUserResponse.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        });
+    }
+
+    /// <summary>
+    /// 驗證 Cookie 模式登入缺少 Antiforgery Token 時，後端拒絕建立登入 Session。
+    /// </summary>
+    [Test]
+    public async Task Login_WhenCookieModeHasNoAntiforgeryToken_ReturnsBadRequest()
+    {
+        // 準備
+        await using var factory = new AuthApiFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"),
+            HandleCookies = true,
+        });
+        await client.PostAsJsonAsync(
+            RegisterPath,
+            new
+            {
+                UserAccount = "csrf_user",
+                DisplayName = "CSRF 使用者",
+                Email = "csrf@example.com",
+                Password = ValidPassword,
+            });
+
+        // 執行
+        var response = await client.PostAsJsonAsync(
+            CookieLoginPath,
+            new
+            {
+                LoginId = "csrf_user",
+                Password = ValidPassword,
+            });
+
+        // 驗證
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    /// <summary>
     /// 驗證 Production 環境已設定的前端來源可通過註冊 API 的 CORS 預檢。
     /// </summary>
     [Test]
@@ -589,6 +724,17 @@ public class AuthApiTests
                 }
             });
         }
+    }
+
+    private static async Task AddAntiforgeryTokenAsync(HttpClient client)
+    {
+        using var response = await client.GetAsync(AntiforgeryPath);
+        response.EnsureSuccessStatusCode();
+        using var responseJson = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        client.DefaultRequestHeaders.Remove(AntiforgeryHeaderName);
+        client.DefaultRequestHeaders.Add(
+            AntiforgeryHeaderName,
+            responseJson.RootElement.GetProperty("requestToken").GetString());
     }
 
     private sealed class ThrowingAuthService : IAuthService
