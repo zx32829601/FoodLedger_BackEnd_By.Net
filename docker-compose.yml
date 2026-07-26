@@ -20,9 +20,10 @@ services:
       context: .
       dockerfile: FoodLedger/Dockerfile
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:?POSTGRES_DB is required.};Username=${POSTGRES_USER:?POSTGRES_USER is required.};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required.}
+      Cors__AllowedOrigins__0: ${FOODLEDGER_CORS_ALLOWED_ORIGIN:-}
     ports:
       - "${FOODLEDGER_API_HTTP_PORT:-5062}:8080"
     depends_on:

@@ -8,11 +8,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 
-const string DevelopmentCorsPolicy = "DevelopmentCorsPolicy";
+const string FrontendCorsPolicy = "FrontendCorsPolicy";
 const string CorsAllowedOriginsConfigurationKey = "Cors:AllowedOrigins";
 
 var builder = WebApplication.CreateBuilder(args);
-var configuredDevelopmentCorsOrigins = builder.Configuration
+var isDevelopmentEnvironment = builder.Environment.IsDevelopment();
+var configuredCorsOrigins = builder.Configuration
     .GetSection(CorsAllowedOriginsConfigurationKey)
     .GetChildren()
     .Select(section => section.Value)
@@ -57,15 +58,15 @@ builder.Services.AddProblemDetails();
 builder.Services.AddApplicationAuthorization();
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(DevelopmentCorsPolicy, policy =>
+    options.AddPolicy(FrontendCorsPolicy, policy =>
     {
         policy
             .SetIsOriginAllowed(origin =>
                 Uri.TryCreate(origin, UriKind.Absolute, out var uri)
                 && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
-                && (uri.Host == "localhost"
-                    || uri.Host == "127.0.0.1"
-                    || configuredDevelopmentCorsOrigins.Contains(origin)))
+                && ((isDevelopmentEnvironment
+                        && (uri.Host == "localhost" || uri.Host == "127.0.0.1"))
+                    || configuredCorsOrigins.Contains(origin)))
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -114,10 +115,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseCors(DevelopmentCorsPolicy);
-}
+app.UseCors(FrontendCorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
