@@ -10,6 +10,7 @@ using Microsoft.OpenApi;
 
 const string FrontendCorsPolicy = "FrontendCorsPolicy";
 const string CorsAllowedOriginsConfigurationKey = "Cors:AllowedOrigins";
+const string ApplyMigrationsOnStartupConfigurationKey = "Database:ApplyMigrationsOnStartup";
 
 var builder = WebApplication.CreateBuilder(args);
 var isDevelopmentEnvironment = builder.Environment.IsDevelopment();
@@ -101,6 +102,13 @@ builder.Services.AddSwaggerGen(options =>
 });           // 生成 Swagger 規格
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var app = builder.Build();
+
+if (app.Configuration.GetValue<bool>(ApplyMigrationsOnStartupConfigurationKey))
+{
+    await using var migrationScope = app.Services.CreateAsyncScope();
+    var dbContext = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 app.MapDefaultEndpoints();
 app.UseExceptionHandler();

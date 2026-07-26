@@ -336,10 +336,12 @@ Jenkins 部署預設使用以下參數：
 
 ```text
 ASPNETCORE_ENVIRONMENT=Production
-FOODLEDGER_CORS_ALLOWED_ORIGIN=http://localhost:8180
+FOODLEDGER_CORS_ALLOWED_ORIGIN=
 ```
 
-若同一 Wi-Fi 的其他裝置會用區網 IP 開啟前端，請在 Build with Parameters 將 `FOODLEDGER_CORS_ALLOWED_ORIGIN` 改成實際前端 Origin，例如 `http://192.168.0.177:8180`。前端 Docker build 的 `FOOD_LEDGER_API_BASE_URL` 也必須使用瀏覽器可連線的後端區網 URL，不能使用 `localhost`。
+`FOODLEDGER_CORS_ALLOWED_ORIGIN` 參數留空時，Local Deploy 會沿用 Jenkins workspace 未提交的 `.env` 設定；手動填值時才會覆寫 `.env`。請在部署主機的 `.env` 設定實際前端 Origin，例如 `http://192.168.0.177:8180`。若主機 IP 或前端連接埠改變，只需調整 `.env` 或於 Build with Parameters 暫時覆寫。前端 Docker build 的 `FOOD_LEDGER_API_BASE_URL` 也必須使用瀏覽器可連線的後端區網 URL，不能使用 `localhost`。
+
+`APPLY_DATABASE_MIGRATIONS=true` 會讓單一 API 容器啟動時套用尚未執行的 EF Core Migration，避免持久化 PostgreSQL volume 缺少新資料表。此設定適用目前 Jenkins 單一容器部署；若未來改為多副本部署，應改由獨立 migration job 在啟動應用程式前執行。
 
 `RUN_LOCAL_DEPLOY` 預設為：
 

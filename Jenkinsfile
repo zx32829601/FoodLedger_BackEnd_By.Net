@@ -27,8 +27,13 @@ pipeline {
         )
         string(
             name: 'FOODLEDGER_CORS_ALLOWED_ORIGIN',
-            defaultValue: 'http://localhost:8180',
-            description: 'Exact frontend origin allowed to call the API, without a trailing path.'
+            defaultValue: '',
+            description: 'Optional frontend origin override. Leave blank to use the deployment host .env value.'
+        )
+        booleanParam(
+            name: 'APPLY_DATABASE_MIGRATIONS',
+            defaultValue: true,
+            description: 'Apply pending EF Core migrations when the API container starts.'
         )
     }
 
@@ -83,7 +88,8 @@ pipeline {
                     'POSTGRES_HOST_PORT=5432',
                     'FOODLEDGER_API_HTTP_PORT=5062',
                     "ASPNETCORE_ENVIRONMENT=${params.ASPNETCORE_ENVIRONMENT}",
-                    "FOODLEDGER_CORS_ALLOWED_ORIGIN=${params.FOODLEDGER_CORS_ALLOWED_ORIGIN}"
+                    "FOODLEDGER_CORS_ALLOWED_ORIGIN=${params.FOODLEDGER_CORS_ALLOWED_ORIGIN}",
+                    "FOODLEDGER_APPLY_MIGRATIONS_ON_STARTUP=${params.APPLY_DATABASE_MIGRATIONS}"
                 ]) {
                     powershell "& './scripts/Invoke-DockerCompose.ps1' -ArgumentList @('config', '--quiet')"
                 }
@@ -97,13 +103,23 @@ pipeline {
                 }
             }
             steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    withEnv([
+                script {
+                    def deploymentEnvironment = [
                         "PATH=${params.DOCKER_CLI_BIN};${env.DOCKER_DESKTOP_MACHINE_BIN};${env.DOCKER_DESKTOP_USER_BIN};${env.PATH}",
                         "ASPNETCORE_ENVIRONMENT=${params.ASPNETCORE_ENVIRONMENT}",
-                        "FOODLEDGER_CORS_ALLOWED_ORIGIN=${params.FOODLEDGER_CORS_ALLOWED_ORIGIN}"
-                    ]) {
-                        powershell "& './scripts/deploy-local.ps1'"
+                        "FOODLEDGER_APPLY_MIGRATIONS_ON_STARTUP=${params.APPLY_DATABASE_MIGRATIONS}"
+                    ]
+
+                    if (params.FOODLEDGER_CORS_ALLOWED_ORIGIN?.trim()) {
+                        deploymentEnvironment.add(
+                            "FOODLEDGER_CORS_ALLOWED_ORIGIN=${params.FOODLEDGER_CORS_ALLOWED_ORIGIN.trim()}"
+                        )
+                    }
+
+                    timeout(time: 10, unit: 'MINUTES') {
+                        withEnv(deploymentEnvironment) {
+                            powershell "& './scripts/deploy-local.ps1'"
+                        }
                     }
                 }
             }
