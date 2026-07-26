@@ -144,6 +144,7 @@ FoodLedger_BackEnd_By.Net/
 - [自訂 Auth API 與統一 API 錯誤回應規格](docs/specs/auth-and-api-error-response.md)
 - [通用 DefinedCode 代碼架構規格](docs/specs/defined-codes.md)
 - [主要 DailyRecord 飲食紀錄功能規格](docs/specs/daily-records.md)
+- [Nutrition Summary 營養素統計規格](docs/specs/nutrition-summary.md)
 
 ## 技術棧
 
