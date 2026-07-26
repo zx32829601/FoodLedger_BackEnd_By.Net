@@ -143,10 +143,17 @@ public class DailyRecordsApiAuthorizationTests
         var response = await client.DeleteAsync("/api/daily-records/999");
 
         // Assert
+        using var responseJson = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = responseJson.RootElement;
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             Assert.That(dailyRecordService.ReceivedDeleteRecordId, Is.EqualTo(999));
+            Assert.That(root.GetProperty("code").GetString(), Is.EqualTo("DailyRecord.NotFound"));
+            Assert.That(
+                root.GetProperty("parameters").GetProperty("recordId").GetInt64(),
+                Is.EqualTo(999));
+            Assert.That(root.GetProperty("traceId").GetString(), Is.Not.Null.And.Not.Empty);
         });
     }
 
@@ -410,7 +417,7 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
-    /// 驗證食用數量為 0 的驗證錯誤內容會包含 Quantity 欄位，讓呼叫端可對應欄位錯誤。
+    /// 驗證食用數量為 0 的統一驗證錯誤內容會包含 lower camel case quantity 欄位。
     /// </summary>
     [Test]
     public async Task Create_WhenQuantityIsZero_ReturnsValidationProblemWithQuantityError()
@@ -440,13 +447,16 @@ public class DailyRecordsApiAuthorizationTests
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-            Assert.That(errors.TryGetProperty(nameof(CreateDailyRecordRequest.Quantity), out _), Is.True);
+            Assert.That(
+                problemDetails.RootElement.GetProperty("code").GetString(),
+                Is.EqualTo("Validation.Failed"));
+            Assert.That(errors.TryGetProperty("quantity", out _), Is.True);
             Assert.That(dailyRecordService.WasCalled, Is.False);
         });
     }
 
     /// <summary>
-    /// 驗證食用數量為 0 的 Quantity 欄位錯誤會以非空陣列回傳，讓呼叫端可安全渲染錯誤清單。
+    /// 驗證食用數量為 0 的 quantity 欄位錯誤會以含穩定 code 的非空物件陣列回傳。
     /// </summary>
     [Test]
     public async Task Create_WhenQuantityIsZero_ReturnsNonEmptyQuantityErrorsArray()
@@ -473,13 +483,19 @@ public class DailyRecordsApiAuthorizationTests
         using var problemDetails = await JsonDocument.ParseAsync(responseStream);
         var quantityErrors = problemDetails.RootElement
             .GetProperty("errors")
-            .GetProperty(nameof(CreateDailyRecordRequest.Quantity));
+            .GetProperty("quantity");
 
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(quantityErrors.ValueKind, Is.EqualTo(JsonValueKind.Array));
             Assert.That(quantityErrors.GetArrayLength(), Is.GreaterThan(0));
+            Assert.That(
+                quantityErrors[0].GetProperty("code").GetString(),
+                Is.EqualTo("DailyRecord.QuantityMustBeGreaterThanZero"));
+            Assert.That(
+                quantityErrors[0].GetProperty("parameters").GetProperty("min").GetInt32(),
+                Is.EqualTo(0));
             Assert.That(dailyRecordService.WasCalled, Is.False);
         });
     }

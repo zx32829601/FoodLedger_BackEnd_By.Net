@@ -1,5 +1,6 @@
 using FoodLedger.Controllers;
 using FoodLedger.DTOs.DailyRecords;
+using FoodLedger.DTOs.Errors;
 using FoodLedger.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -107,7 +108,13 @@ public class DailyRecordsControllerTests
         // Arrange
         var dailyRecordService = new ThrowingDailyRecordService(
             new ArgumentOutOfRangeException(nameof(CreateDailyRecordRequest.ConsumedAt)));
-        var controller = new DailyRecordsController(dailyRecordService);
+        var controller = new DailyRecordsController(dailyRecordService)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext(),
+            },
+        };
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
@@ -119,13 +126,18 @@ public class DailyRecordsControllerTests
         var result = await controller.Create(request, CancellationToken.None);
 
         // Assert
-        var validationProblemResult = result as ObjectResult;
-        Assert.That(validationProblemResult, Is.Not.Null);
-        Assert.That(validationProblemResult!.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
-        Assert.That(validationProblemResult.Value, Is.TypeOf<ValidationProblemDetails>());
-
-        var problemDetails = (ValidationProblemDetails)validationProblemResult.Value!;
-        Assert.That(problemDetails.Errors, Contains.Key(nameof(CreateDailyRecordRequest.ConsumedAt)));
+        var badRequestResult = result as BadRequestObjectResult;
+        var error = badRequestResult?.Value as ApiErrorResponse;
+        Assert.Multiple(() =>
+        {
+            Assert.That(badRequestResult, Is.Not.Null);
+            Assert.That(error?.Code, Is.EqualTo("Validation.Failed"));
+            Assert.That(error?.Errors, Contains.Key("consumedAt"));
+            Assert.That(
+                error?.Errors?["consumedAt"].Single().Code,
+                Is.EqualTo("DailyRecord.ConsumedAtCannotBeFuture"));
+            Assert.That(error?.TraceId, Is.Not.Null.And.Not.Empty);
+        });
     }
 
     /// <summary>
@@ -136,7 +148,13 @@ public class DailyRecordsControllerTests
     {
         // Arrange
         var dailyRecordService = new ThrowingDailyRecordService(new KeyNotFoundException("Food 999 does not exist."));
-        var controller = new DailyRecordsController(dailyRecordService);
+        var controller = new DailyRecordsController(dailyRecordService)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext(),
+            },
+        };
         var request = new CreateDailyRecordRequest
         {
             FoodId = 999,
@@ -148,7 +166,15 @@ public class DailyRecordsControllerTests
         var result = await controller.Create(request, CancellationToken.None);
 
         // Assert
-        Assert.That(result, Is.InstanceOf<NotFoundResult>());
+        var notFoundResult = result as NotFoundObjectResult;
+        var error = notFoundResult?.Value as ApiErrorResponse;
+        Assert.Multiple(() =>
+        {
+            Assert.That(notFoundResult, Is.Not.Null);
+            Assert.That(error?.Code, Is.EqualTo("DailyRecord.FoodNotFound"));
+            Assert.That(error?.Parameters?["foodId"], Is.EqualTo(999));
+            Assert.That(error?.TraceId, Is.Not.Null.And.Not.Empty);
+        });
     }
 
     /// <summary>
@@ -224,13 +250,27 @@ public class DailyRecordsControllerTests
         // Arrange
         var dailyRecordService = new ThrowingDailyRecordService(
             new KeyNotFoundException("DailyRecord 999 does not exist."));
-        var controller = new DailyRecordsController(dailyRecordService);
+        var controller = new DailyRecordsController(dailyRecordService)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext(),
+            },
+        };
 
         // Act
         var result = await controller.Delete(999, CancellationToken.None);
 
         // Assert
-        Assert.That(result, Is.InstanceOf<NotFoundResult>());
+        var notFoundResult = result as NotFoundObjectResult;
+        var error = notFoundResult?.Value as ApiErrorResponse;
+        Assert.Multiple(() =>
+        {
+            Assert.That(notFoundResult, Is.Not.Null);
+            Assert.That(error?.Code, Is.EqualTo("DailyRecord.NotFound"));
+            Assert.That(error?.Parameters?["recordId"], Is.EqualTo(999));
+            Assert.That(error?.TraceId, Is.Not.Null.And.Not.Empty);
+        });
     }
 
     private sealed class RecordingDailyRecordService : IDailyRecordService

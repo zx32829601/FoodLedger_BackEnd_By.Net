@@ -18,6 +18,7 @@ namespace FoodLedger.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly ICurrentUserService _currentUserService;
+    private readonly IAuthService _authService;
 
     /// <summary>
     /// 初始化使用者 Controller。
@@ -25,9 +26,13 @@ public class UsersController : ControllerBase
     /// <param name="currentUserService">
     /// 目前登入使用者服務，用來取得已通過授權 middleware 驗證的使用者資訊。
     /// </param>
-    public UsersController(ICurrentUserService currentUserService)
+    /// <param name="authService">用來載入目前 Identity 使用者公開資料的身分驗證服務。</param>
+    public UsersController(
+        ICurrentUserService currentUserService,
+        IAuthService authService)
     {
         _currentUserService = currentUserService;
+        _authService = authService;
     }
 
     /// <summary>
@@ -53,27 +58,27 @@ public class UsersController : ControllerBase
     /// <code>
     /// {
     ///   "userId": 42,
-    ///   "userName": "food-ledger-user",
-    ///   "isAuthenticated": true
+    ///   "userAccount": "food-ledger-user",
+    ///   "displayName": "Food 使用者",
+    ///   "email": "user@example.com"
     /// }
     /// </code>
     /// </example>
     [HttpGet("me")]
     [ProducesResponseType(typeof(CurrentUserResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public IActionResult GetMe()
+    public async Task<IActionResult> GetMeAsync()
     {
         if (_currentUserService.UserId is not { } userId)
         {
             return Unauthorized();
         }
 
-        var response = new CurrentUserResponse
+        var response = await _authService.GetCurrentUserAsync(userId);
+        if (response is null)
         {
-            UserId = userId,
-            UserName = _currentUserService.UserName,
-            IsAuthenticated = _currentUserService.IsAuthenticated,
-        };
+            return Unauthorized();
+        }
 
         return Ok(response);
     }

@@ -4,8 +4,8 @@ namespace FoodLedger.DTOs.Users;
 /// 目前登入使用者的基本資訊回應。
 /// </summary>
 /// <remarks>
-/// 此 DTO 用於讓前端或手動測試確認目前 request 的登入身分是否已被後端正確解析。
-/// 回應內容不包含 email、角色或其他個資，避免在尚未有明確需求前擴大資料揭露範圍。
+/// 此 DTO 與註冊、登入成功回應內的使用者資料共用相同契約，且不暴露 Identity
+/// 的 PasswordHash、SecurityStamp 等內部安全欄位。
 /// </remarks>
 public sealed class CurrentUserResponse
 {
@@ -15,12 +15,17 @@ public sealed class CurrentUserResponse
     public long UserId { get; init; }
 
     /// <summary>
-    /// 目前登入使用者名稱。
+    /// 目前登入使用者的唯一帳號。
     /// </summary>
-    public string? UserName { get; init; }
+    public required string UserAccount { get; init; }
 
     /// <summary>
-    /// 目前 request 是否已有通過驗證的登入使用者。
+    /// 目前登入使用者的公開顯示名稱。
     /// </summary>
-    public bool IsAuthenticated { get; init; }
+    public required string DisplayName { get; init; }
+
+    /// <summary>
+    /// 目前登入使用者的電子郵件地址。
+    /// </summary>
+    public required string Email { get; init; }
 }

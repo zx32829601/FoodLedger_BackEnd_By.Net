@@ -1,4 +1,5 @@
 using FoodLedger.Data.Entities;
+using FoodLedger.Infrastructure.Authentication;
 using FoodLedger.Infrastructure.Mvc;
 using FoodLedger.Security;
 using FoodLedger.Services;
@@ -8,8 +9,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 
 const string DevelopmentCorsPolicy = "DevelopmentCorsPolicy";
+const string CorsAllowedOriginsConfigurationKey = "Cors:AllowedOrigins";
 
 var builder = WebApplication.CreateBuilder(args);
+var configuredDevelopmentCorsOrigins = builder.Configuration
+    .GetSection(CorsAllowedOriginsConfigurationKey)
+    .GetChildren()
+    .Select(section => section.Value)
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Select(origin => origin!)
+    .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
 builder.AddServiceDefaults();
 
@@ -39,7 +48,11 @@ builder.Services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IdentityBearerTokenResponseFactory>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDailyRecordService, DailyRecordService>();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services.AddApplicationAuthorization();
 builder.Services.AddCors(options =>
@@ -50,13 +63,19 @@ builder.Services.AddCors(options =>
             .SetIsOriginAllowed(origin =>
                 Uri.TryCreate(origin, UriKind.Absolute, out var uri)
                 && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
-                && (uri.Host == "localhost" || uri.Host == "127.0.0.1"))
+                && (uri.Host == "localhost"
+                    || uri.Host == "127.0.0.1"
+                    || configuredDevelopmentCorsOrigins.Contains(origin)))
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
 
 builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = ApiValidationProblemFactory.Create;
+    })
     .ConfigureApplicationPartManager(partManager =>
     {
         partManager.FeatureProviders.Add(
@@ -72,7 +91,7 @@ builder.Services.AddSwaggerGen(options =>
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
         Scheme = "bearer",
-        BearerFormat = "JWT",
+        BearerFormat = "Opaque",
         In = ParameterLocation.Header,
         Description = "請輸入登入後取得的 Bearer token，不需要加上 Bearer 前綴。",
     });
@@ -83,6 +102,7 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -102,7 +122,6 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapIdentityApi<ApplicationUser>();
 app.MapControllers();
 
 app.Run();
