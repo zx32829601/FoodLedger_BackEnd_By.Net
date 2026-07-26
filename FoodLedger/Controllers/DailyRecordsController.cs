@@ -137,12 +137,98 @@ public sealed class DailyRecordsController : ControllerBase
                 },
             });
         }
+        catch (DailyRecordValidationException exception)
+        {
+            return ApiValidationProblemFactory.CreateForField(
+                HttpContext,
+                exception.FieldName,
+                exception.ErrorCode);
+        }
         catch (UnauthorizedAccessException)
         {
             return Unauthorized();
         }
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// 修改目前登入使用者的一筆每日飲食紀錄。
+    /// </summary>
+    /// <param name="recordId">要修改的飲食紀錄識別碼。</param>
+    /// <param name="request">食物、份量、攝取時間、餐別與備註。</param>
+    /// <param name="cancellationToken">取消目前 HTTP request 的通知權杖。</param>
+    /// <returns>修改成功回傳 <c>204 No Content</c>。</returns>
+    /// <remarks>不存在或不屬於目前使用者的紀錄皆回傳 404，避免洩漏資料存在性。</remarks>
+    /// <example>
+    /// <code>
+    /// PUT /api/daily-records/1
+    /// {
+    ///   "foodId": 2,
+    ///   "quantity": 1.5,
+    ///   "consumedAt": "2026-07-21T12:00:00Z",
+    ///   "mealTypeCode": "Lunch",
+    ///   "note": "公司午餐"
+    /// }
+    /// </code>
+    /// </example>
+    [HttpPut("{recordId:long}")]
+    [CookieAntiforgery]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(
+        long recordId,
+        UpdateDailyRecordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _dailyRecordService.UpdateDailyRecordAsync(recordId, request, cancellationToken);
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (DailyRecordValidationException exception)
+        {
+            return ApiValidationProblemFactory.CreateForField(
+                HttpContext,
+                exception.FieldName,
+                exception.ErrorCode);
+        }
+        catch (ArgumentOutOfRangeException exception)
+        {
+            var errorCode = exception.ParamName switch
+            {
+                nameof(UpdateDailyRecordRequest.Quantity) when request.Quantity <= 0 =>
+                    DailyRecordErrorCodes.QuantityMustBeGreaterThanZero,
+                nameof(UpdateDailyRecordRequest.Quantity) => DailyRecordErrorCodes.QuantityOutOfRange,
+                nameof(UpdateDailyRecordRequest.FoodId) => DailyRecordErrorCodes.FoodIdInvalid,
+                nameof(UpdateDailyRecordRequest.ConsumedAt) =>
+                    DailyRecordErrorCodes.ConsumedAtCannotBeFuture,
+                _ => ApiValidationErrorCodes.InvalidValue,
+            };
+            return ApiValidationProblemFactory.CreateForField(
+                HttpContext,
+                exception.ParamName ?? string.Empty,
+                errorCode);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new ApiErrorResponse
+            {
+                Code = DailyRecordErrorCodes.NotFound,
+                Message = "找不到指定的飲食紀錄或食物。",
+                TraceId = HttpContext.TraceIdentifier,
+                Parameters = new Dictionary<string, object?>
+                {
+                    ["recordId"] = recordId,
+                },
+            });
+        }
     }
 
     /// <summary>

@@ -225,6 +225,36 @@ public class DailyRecordsControllerTests
     }
 
     /// <summary>
+    /// 驗證修改 request 有效時，Controller 會傳遞紀錄識別碼與 request 並回傳 204。
+    /// </summary>
+    [Test]
+    public async Task Update_WhenRequestIsValid_CallsServiceAndReturnsNoContent()
+    {
+        // Arrange
+        var dailyRecordService = new RecordingDailyRecordService();
+        var controller = new DailyRecordsController(dailyRecordService);
+        var request = new UpdateDailyRecordRequest
+        {
+            FoodId = 2,
+            Quantity = 1.5m,
+            ConsumedAt = DateTimeOffset.UtcNow,
+            MealTypeCode = "Lunch",
+            Note = "午餐",
+        };
+
+        // Act
+        var result = await controller.Update(7, request, CancellationToken.None);
+
+        // Assert
+        Assert.That(result, Is.TypeOf<NoContentResult>());
+        Assert.Multiple(() =>
+        {
+            Assert.That(dailyRecordService.ReceivedUpdateRecordId, Is.EqualTo(7));
+            Assert.That(dailyRecordService.ReceivedUpdateRequest, Is.SameAs(request));
+        });
+    }
+
+    /// <summary>
     /// 驗證刪除飲食紀錄時 Service 回報未授權，Controller 會轉成 401 Unauthorized。
     /// </summary>
     [Test]
@@ -285,6 +315,10 @@ public class DailyRecordsControllerTests
 
         public long? ReceivedDeleteRecordId { get; private set; }
 
+        public long? ReceivedUpdateRecordId { get; private set; }
+
+        public UpdateDailyRecordRequest? ReceivedUpdateRequest { get; private set; }
+
         public CancellationToken ReceivedDeleteCancellationToken { get; private set; }
 
         public IReadOnlyList<DailyRecordResponse> RecordsToReturn { get; init; } = [];
@@ -305,6 +339,16 @@ public class DailyRecordsControllerTests
             ReceivedDate = date;
             ReceivedGetCancellationToken = cancellationToken;
             return Task.FromResult(RecordsToReturn);
+        }
+
+        public Task UpdateDailyRecordAsync(
+            long recordId,
+            UpdateDailyRecordRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ReceivedUpdateRecordId = recordId;
+            ReceivedUpdateRequest = request;
+            return Task.CompletedTask;
         }
 
         public Task DeleteDailyRecordAsync(
@@ -335,6 +379,14 @@ public class DailyRecordsControllerTests
 
         public Task<IReadOnlyList<DailyRecordResponse>> GetDailyRecordsAsync(
             DateOnly date,
+            CancellationToken cancellationToken = default)
+        {
+            throw _exception;
+        }
+
+        public Task UpdateDailyRecordAsync(
+            long recordId,
+            UpdateDailyRecordRequest request,
             CancellationToken cancellationToken = default)
         {
             throw _exception;

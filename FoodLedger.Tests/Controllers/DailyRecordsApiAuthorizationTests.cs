@@ -338,6 +338,7 @@ public class DailyRecordsApiAuthorizationTests
             FoodId = 1,
             Quantity = 1.5m,
             ConsumedAt = consumedAt,
+            MealTypeCode = "Lunch",
         };
 
         // Act
@@ -612,6 +613,7 @@ public class DailyRecordsApiAuthorizationTests
             FoodId = 1,
             Quantity = 10000m,
             ConsumedAt = consumedAt,
+            MealTypeCode = "Snack",
         };
 
         // Act
@@ -623,6 +625,72 @@ public class DailyRecordsApiAuthorizationTests
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
             Assert.That(dailyRecordService.CallCount, Is.EqualTo(1));
             Assert.That(dailyRecordService.ReceivedRequest?.Quantity, Is.EqualTo(request.Quantity));
+        });
+    }
+
+    /// <summary>
+    /// 驗證未登入使用者修改飲食紀錄時，授權機制回傳 401 且不呼叫 Service。
+    /// </summary>
+    [Test]
+    public async Task Update_WhenRequestIsAnonymous_ReturnsUnauthorizedAndDoesNotCallService()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        var request = new
+        {
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
+            MealTypeCode = "Lunch",
+        };
+
+        // Act
+        var response = await client.PutAsJsonAsync("/api/daily-records/1", request);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+            Assert.That(dailyRecordService.WasCalled, Is.False);
+        });
+    }
+
+    /// <summary>
+    /// 驗證修改 request 缺少餐別時，回傳 mealTypeCode 欄位的穩定驗證錯誤。
+    /// </summary>
+    [Test]
+    public async Task Update_WhenMealTypeCodeIsMissing_ReturnsInvalidMealTypeValidationError()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+        var request = new
+        {
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
+        };
+
+        // Act
+        var response = await client.PutAsJsonAsync("/api/daily-records/1", request);
+        await using var responseStream = await response.Content.ReadAsStreamAsync();
+        using var error = await JsonDocument.ParseAsync(responseStream);
+        var mealTypeErrors = error.RootElement.GetProperty("errors").GetProperty("mealTypeCode");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(
+                mealTypeErrors[0].GetProperty("code").GetString(),
+                Is.EqualTo("DailyRecord.InvalidMealType"));
+            Assert.That(dailyRecordService.WasCalled, Is.False);
         });
     }
 
@@ -723,6 +791,15 @@ public class DailyRecordsApiAuthorizationTests
             WasCalled = true;
             ReceivedDate = date;
             return Task.FromResult(RecordsToReturn);
+        }
+
+        public Task UpdateDailyRecordAsync(
+            long recordId,
+            UpdateDailyRecordRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            WasCalled = true;
+            return Task.CompletedTask;
         }
 
         public Task DeleteDailyRecordAsync(

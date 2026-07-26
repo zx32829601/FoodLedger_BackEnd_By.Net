@@ -23,6 +23,14 @@ public class DailyRecord : BaseEntity
     [Column("consumed_at")]
     public DateTimeOffset ConsumedAt { get; set; } = DateTimeOffset.UtcNow;
 
+    [MaxLength(50)]
+    [Column("meal_type_code")]
+    public string MealTypeCode { get; set; } = MealTypeCodes.Snack;
+
+    [MaxLength(500)]
+    [Column("note")]
+    public string? Note { get; set; }
+
     [ForeignKey(nameof(UserId))]
     public virtual ApplicationUser User { get; set; } = null!;
 

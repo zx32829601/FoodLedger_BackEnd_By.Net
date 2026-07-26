@@ -16,6 +16,9 @@ internal sealed class DailyRecordConfiguration : IEntityTypeConfiguration<DailyR
         entity.Property(e => e.Quantity)
             .HasPrecision(10, 3);
 
+        entity.Property(e => e.MealTypeCode)
+            .HasDefaultValue(MealTypeCodes.Snack);
+
         entity.HasIndex(e => new { e.UserId, e.ConsumedAt })
             .HasDatabaseName("ix_daily_record_user_id_consumed_at");
 

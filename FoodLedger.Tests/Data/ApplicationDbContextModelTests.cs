@@ -77,6 +77,51 @@ public class ApplicationDbContextModelTests
         Assert.That(index!.GetDatabaseName(), Is.EqualTo("ix_daily_record_user_id_consumed_at"));
     }
 
+    /// <summary>
+    /// 驗證 DefinedCode 使用 CodeType 與 Code 複合主鍵，避免同類型代碼重複。
+    /// </summary>
+    [Test]
+    public void DefinedCode_WhenModelIsBuilt_HasCodeTypeAndCodeCompositeKey()
+    {
+        // Arrange
+        using var dbContext = CreateDbContext();
+        var entityType = dbContext.Model.FindEntityType(typeof(DefinedCode));
+
+        // Act
+        var keyProperties = entityType?.FindPrimaryKey()?.Properties
+            .Select(property => property.Name);
+
+        // Assert
+        Assert.That(keyProperties, Is.EqualTo(new[]
+        {
+            nameof(DefinedCode.CodeType),
+            nameof(DefinedCode.Code),
+        }));
+    }
+
+    /// <summary>
+    /// 驗證 DailyRecord 的餐別為必要欄位且備註最大長度為 500。
+    /// </summary>
+    [Test]
+    public void DailyRecord_WhenModelIsBuilt_ConfiguresMealTypeAndNoteConstraints()
+    {
+        // Arrange
+        using var dbContext = CreateDbContext();
+        var entityType = GetDailyRecordEntityType(dbContext);
+
+        // Act
+        var mealTypeProperty = entityType.FindProperty(nameof(DailyRecord.MealTypeCode));
+        var noteProperty = entityType.FindProperty(nameof(DailyRecord.Note));
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(mealTypeProperty?.IsNullable, Is.False);
+            Assert.That(mealTypeProperty?.GetMaxLength(), Is.EqualTo(50));
+            Assert.That(noteProperty?.GetMaxLength(), Is.EqualTo(500));
+        });
+    }
+
     private static ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()

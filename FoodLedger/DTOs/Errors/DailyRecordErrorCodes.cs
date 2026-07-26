@@ -36,4 +36,14 @@ public static class DailyRecordErrorCodes
     /// </summary>
     public const string ConsumedAtCannotBeFuture =
         "DailyRecord.ConsumedAtCannotBeFuture";
+
+    /// <summary>
+    /// 餐別不存在、已停用或不是 MealType。
+    /// </summary>
+    public const string InvalidMealType = "DailyRecord.InvalidMealType";
+
+    /// <summary>
+    /// 備註 trim 後超過 500 字元。
+    /// </summary>
+    public const string NoteTooLong = "DailyRecord.NoteTooLong";
 }
