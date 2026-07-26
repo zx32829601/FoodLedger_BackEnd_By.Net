@@ -1,0 +1,55 @@
+@startuml
+title FoodLedger CI/CD 流程圖
+
+skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam shadowing false
+left to right direction
+
+actor "開發者" as Developer
+
+cloud "GitHub" as GitHub {
+  component "Feature Branch" as Branch
+  component "Pull Request" as PR
+  component "GitHub Actions\nCI" as Actions
+  component "master" as Master
+}
+
+node "本機 Jenkins" as JenkinsHost {
+  component "Jenkins Pipeline" as Jenkins
+}
+
+node "Docker Desktop" as DockerHost {
+  component "Docker Compose" as Compose
+  component "FoodLedger API Container" as ApiContainer
+  database "PostgreSQL Container" as DbContainer
+}
+
+Developer -right-> Branch : push
+Branch -right-> PR : open PR
+PR -down-> Actions : trigger
+Actions -down-> Actions : dotnet restore
+Actions -down-> Actions : dotnet build
+Actions -down-> Actions : dotnet test
+Actions -up-> PR : report checks
+
+Developer -right-> Master : merge PR
+Master -right-> Jenkins : Poll SCM\n每 2 分鐘檢查
+Jenkins -down-> Jenkins : checkout / restore / build / test
+Jenkins -right-> Compose : RUN_LOCAL_DEPLOY=true
+Compose -down-> ApiContainer : build / up -d
+Compose -down-> DbContainer : up -d
+
+note right of Actions
+GitHub Actions：
+檢查 PR 品質，
+不部署到本機。
+end note
+
+note right of Jenkins
+Jenkins：
+監聽 master 更新，
+負責本機 Docker 部署。
+end note
+
+@enduml

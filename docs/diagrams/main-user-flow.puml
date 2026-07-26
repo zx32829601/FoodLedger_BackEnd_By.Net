@@ -1,0 +1,95 @@
+@startuml
+title FoodLedger 主要使用者流程 UML Activity Diagram
+
+skinparam linetype ortho
+skinparam shadowing false
+
+start
+
+:使用者開啟 FoodLedger;
+
+if (是否已登入?) then (是)
+  :進入每日飲食紀錄頁;
+else (否)
+  :選擇註冊或登入;
+
+  if (註冊?) then (是)
+    :輸入 UserAccount / DisplayName / Email / Password;
+    :後端驗證註冊資料;
+    if (註冊資料有效?) then (是)
+      :建立 ApplicationUser;
+      :回傳 Token + 使用者基本資料;
+    else (否)
+      :回傳統一錯誤格式;
+      stop
+    endif
+  else (登入)
+    :輸入 UserAccount 或 Email + Password;
+    :後端驗證登入資料;
+    if (登入成功?) then (是)
+      :回傳 Token + 使用者基本資料;
+    else (否)
+      :回傳 Auth.InvalidCredentials;
+      stop
+    endif
+  endif
+endif
+
+:取得餐別代碼;
+:GET /api/defined-codes/meal-types;
+:前端顯示餐別 Select;
+
+:查詢當日飲食紀錄;
+:GET /api/daily-records?date=yyyy-MM-dd;
+:後端只查目前登入使用者資料;
+:回傳 DailyRecord flat list;
+:前端依 mealTypeCode 分組顯示;
+
+if (使用者操作飲食紀錄?) then (新增)
+  :輸入 foodId / quantityInGrams / consumedAt / mealTypeCode / note;
+  :POST /api/daily-records;
+  :Service 驗證使用者、食物、份量、時間、餐別;
+  if (驗證成功?) then (是)
+    :建立 DailyRecord;
+  else (否)
+    :回傳 Validation.Failed;
+    stop
+  endif
+elseif (修改)
+  :修改 foodId / quantityInGrams / consumedAt / mealTypeCode / note;
+  :PUT /api/daily-records/{recordId};
+  :Service 驗證是否為本人紀錄;
+  if (可修改?) then (是)
+    :更新 DailyRecord;
+  else (否)
+    :回傳 404 或 Validation.Failed;
+    stop
+  endif
+elseif (刪除)
+  :DELETE /api/daily-records/{recordId};
+  :Service 驗證是否為本人紀錄;
+  if (可刪除?) then (是)
+    :實體刪除 DailyRecord;
+  else (否)
+    :回傳 404;
+    stop
+  endif
+endif
+
+:重新查詢當日飲食紀錄;
+
+if (查看營養素分析?) then (單日)
+  :GET /api/nutrition-summary/daily?date=yyyy-MM-dd;
+  :即時計算 DailyRecord + FoodNutrient;
+  :回傳 totals + mealTypes;
+elseif (每週)
+  :GET /api/nutrition-summary/weekly?date=yyyy-MM-dd;
+  :後端計算該日期所在週一到週日;
+  :即時計算週總量與 7 天 breakdown;
+  :回傳 startDate / endDate / totals / days;
+endif
+
+:前端顯示營養素統計;
+
+stop
+@enduml
