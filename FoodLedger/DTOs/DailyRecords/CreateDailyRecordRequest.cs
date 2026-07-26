@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using FoodLedger.DTOs.Errors;
 
 namespace FoodLedger.DTOs.DailyRecords;
 
@@ -8,11 +9,11 @@ namespace FoodLedger.DTOs.DailyRecords;
 /// <remarks>
 /// 請求不可包含使用者 ID；紀錄擁有者必須由後端透過目前登入使用者決定。
 /// </remarks>
-public sealed class CreateDailyRecordRequest
+public sealed class CreateDailyRecordRequest : IValidatableObject
 {
-    private const string MinimumQuantity = "0.001";
+    private const decimal MinimumQuantity = 0.001m;
 
-    private const string MaximumQuantity = "10000";
+    private const decimal MaximumQuantity = 10000m;
 
     /// <summary>
     /// 食物資料識別碼。
@@ -20,7 +21,6 @@ public sealed class CreateDailyRecordRequest
     /// <remarks>
     /// 識別碼必須大於 0，避免無效的食物識別碼進入 Service 流程。
     /// </remarks>
-    [Range(1, long.MaxValue)]
     public long FoodId { get; init; }
 
     /// <summary>
@@ -29,11 +29,38 @@ public sealed class CreateDailyRecordRequest
     /// <remarks>
     /// 數量必須介於 0.001 到 10000 之間，避免建立沒有實際攝取量或明顯不合理的飲食紀錄。
     /// </remarks>
-    [Range(typeof(decimal), MinimumQuantity, MaximumQuantity)]
     public decimal Quantity { get; init; }
 
     /// <summary>
     /// 食用時間，應使用 UTC。
     /// </summary>
     public DateTimeOffset ConsumedAt { get; init; }
+
+    /// <summary>
+    /// 驗證食物識別碼與食用數量，並回傳可由 API 層轉換的穩定錯誤代碼。
+    /// </summary>
+    /// <param name="validationContext">目前 request 的驗證內容。</param>
+    /// <returns>欄位不符合限制時回傳對應的驗證結果。</returns>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (FoodId <= 0)
+        {
+            yield return new ValidationResult(
+                DailyRecordErrorCodes.FoodIdInvalid,
+                [nameof(FoodId)]);
+        }
+
+        if (Quantity <= 0)
+        {
+            yield return new ValidationResult(
+                DailyRecordErrorCodes.QuantityMustBeGreaterThanZero,
+                [nameof(Quantity)]);
+        }
+        else if (Quantity is < MinimumQuantity or > MaximumQuantity)
+        {
+            yield return new ValidationResult(
+                DailyRecordErrorCodes.QuantityOutOfRange,
+                [nameof(Quantity)]);
+        }
+    }
 }

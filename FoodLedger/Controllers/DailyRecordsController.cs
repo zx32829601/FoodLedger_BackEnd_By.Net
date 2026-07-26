@@ -1,4 +1,6 @@
 using FoodLedger.DTOs.DailyRecords;
+using FoodLedger.DTOs.Errors;
+using FoodLedger.Infrastructure.Mvc;
 using FoodLedger.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -47,7 +49,7 @@ public sealed class DailyRecordsController : ControllerBase
     /// </example>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<DailyRecordResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetDailyRecords(
         [FromQuery, BindRequired] DateOnly date,
@@ -90,8 +92,9 @@ public sealed class DailyRecordsController : ControllerBase
     /// </example>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Create(
         CreateDailyRecordRequest request,
         CancellationToken cancellationToken = default)
@@ -102,14 +105,35 @@ public sealed class DailyRecordsController : ControllerBase
         }
         catch (ArgumentOutOfRangeException exception)
         {
-            ModelState.AddModelError(exception.ParamName ?? string.Empty, exception.Message);
-            return ValidationProblem(
-                statusCode: StatusCodes.Status400BadRequest,
-                modelStateDictionary: ModelState);
+            var errorCode = exception.ParamName switch
+            {
+                nameof(CreateDailyRecordRequest.Quantity) when request.Quantity <= 0 =>
+                    DailyRecordErrorCodes.QuantityMustBeGreaterThanZero,
+                nameof(CreateDailyRecordRequest.Quantity) =>
+                    DailyRecordErrorCodes.QuantityOutOfRange,
+                nameof(CreateDailyRecordRequest.FoodId) =>
+                    DailyRecordErrorCodes.FoodIdInvalid,
+                nameof(CreateDailyRecordRequest.ConsumedAt) =>
+                    DailyRecordErrorCodes.ConsumedAtCannotBeFuture,
+                _ => ApiValidationErrorCodes.InvalidValue,
+            };
+            return ApiValidationProblemFactory.CreateForField(
+                HttpContext,
+                exception.ParamName ?? string.Empty,
+                errorCode);
         }
         catch (KeyNotFoundException)
         {
-            return NotFound();
+            return NotFound(new ApiErrorResponse
+            {
+                Code = DailyRecordErrorCodes.FoodNotFound,
+                Message = "找不到指定的食物。",
+                TraceId = HttpContext.TraceIdentifier,
+                Parameters = new Dictionary<string, object?>
+                {
+                    ["foodId"] = request.FoodId,
+                },
+            });
         }
         catch (UnauthorizedAccessException)
         {
@@ -138,7 +162,7 @@ public sealed class DailyRecordsController : ControllerBase
     [HttpDelete("{recordId:long}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(
         long recordId,
         CancellationToken cancellationToken = default)
@@ -153,7 +177,16 @@ public sealed class DailyRecordsController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound();
+            return NotFound(new ApiErrorResponse
+            {
+                Code = DailyRecordErrorCodes.NotFound,
+                Message = "找不到指定的飲食紀錄。",
+                TraceId = HttpContext.TraceIdentifier,
+                Parameters = new Dictionary<string, object?>
+                {
+                    ["recordId"] = recordId,
+                },
+            });
         }
 
         return NoContent();
