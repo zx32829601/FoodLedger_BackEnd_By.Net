@@ -27,7 +27,7 @@ pipeline {
         )
         string(
             name: 'FOODLEDGER_CORS_ALLOWED_ORIGIN',
-            defaultValue: 'http://localhost:8180',
+            defaultValue: 'http://192.168.0.177:8180',
             description: 'Exact frontend origin allowed to call the API, without a trailing path.'
         )
         booleanParam(
