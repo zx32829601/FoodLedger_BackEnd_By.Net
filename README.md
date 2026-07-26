@@ -261,11 +261,11 @@ http://localhost:5062/swagger
 
 ### 前端 CORS 設定
 
-`FOODLEDGER_CORS_ALLOWED_ORIGIN` 必須填寫完整前端 Origin，也就是「協定 + 主機 + 連接埠」，不可包含路徑或萬用字元。例如 Jenkins 將前端部署在同一台主機的 `8080`：
+`FOODLEDGER_CORS_ALLOWED_ORIGIN` 必須填寫完整前端 Origin，也就是「協定 + 主機 + 連接埠」，不可包含路徑或萬用字元。例如 Jenkins 使用主機 `8080`、前端部署在同一台主機的 `8180`：
 
 ```dotenv
 ASPNETCORE_ENVIRONMENT=Production
-FOODLEDGER_CORS_ALLOWED_ORIGIN=http://192.168.0.177:8080
+FOODLEDGER_CORS_ALLOWED_ORIGIN=http://192.168.0.177:8180
 ```
 
 後端會將此值傳入 `Cors__AllowedOrigins__0`。Production 只允許明確列出的 Origin；Development 額外允許 `localhost` 與 `127.0.0.1`，方便本機開發。CORS 不會讓網站繞過登入或授權，但設定成任意 Origin 會不必要地擴大哪些網站能從瀏覽器呼叫 API，因此正式環境不使用 `AllowAnyOrigin`。
@@ -330,10 +330,10 @@ Jenkins 部署預設使用以下參數：
 
 ```text
 ASPNETCORE_ENVIRONMENT=Production
-FOODLEDGER_CORS_ALLOWED_ORIGIN=http://localhost:8080
+FOODLEDGER_CORS_ALLOWED_ORIGIN=http://localhost:8180
 ```
 
-若同一 Wi-Fi 的其他裝置會用區網 IP 開啟前端，請在 Build with Parameters 將 `FOODLEDGER_CORS_ALLOWED_ORIGIN` 改成實際前端 Origin，例如 `http://192.168.0.177:8080`。前端 Docker build 的 `FOOD_LEDGER_API_BASE_URL` 也必須使用瀏覽器可連線的後端區網 URL，不能使用 `localhost`。
+若同一 Wi-Fi 的其他裝置會用區網 IP 開啟前端，請在 Build with Parameters 將 `FOODLEDGER_CORS_ALLOWED_ORIGIN` 改成實際前端 Origin，例如 `http://192.168.0.177:8180`。前端 Docker build 的 `FOOD_LEDGER_API_BASE_URL` 也必須使用瀏覽器可連線的後端區網 URL，不能使用 `localhost`。
 
 `RUN_LOCAL_DEPLOY` 預設為：
 
