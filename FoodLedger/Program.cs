@@ -9,8 +9,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 
 const string DevelopmentCorsPolicy = "DevelopmentCorsPolicy";
+const string CorsAllowedOriginsConfigurationKey = "Cors:AllowedOrigins";
 
 var builder = WebApplication.CreateBuilder(args);
+var configuredDevelopmentCorsOrigins = builder.Configuration
+    .GetSection(CorsAllowedOriginsConfigurationKey)
+    .GetChildren()
+    .Select(section => section.Value)
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .Select(origin => origin!)
+    .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
 builder.AddServiceDefaults();
 
@@ -55,7 +63,9 @@ builder.Services.AddCors(options =>
             .SetIsOriginAllowed(origin =>
                 Uri.TryCreate(origin, UriKind.Absolute, out var uri)
                 && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
-                && (uri.Host == "localhost" || uri.Host == "127.0.0.1"))
+                && (uri.Host == "localhost"
+                    || uri.Host == "127.0.0.1"
+                    || configuredDevelopmentCorsOrigins.Contains(origin)))
             .AllowAnyHeader()
             .AllowAnyMethod();
     });

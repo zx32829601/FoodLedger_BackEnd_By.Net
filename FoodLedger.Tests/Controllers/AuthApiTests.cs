@@ -28,6 +28,10 @@ public class AuthApiTests
     private const string InvalidPassword = "WrongPassword1";
     private const string BuiltInRegisterPath = "/register";
     private const string BuiltInLoginPath = "/login";
+    private const string AllowedCorsOrigin = "http://192.168.10.50:8180";
+    private const string DeniedCorsOrigin = "http://192.168.10.51:8180";
+    private const string DevelopmentEnvironment = "Development";
+    private const string TestingEnvironment = "Testing";
 
     /// <summary>
     /// 驗證有效註冊資料會建立使用者、回傳 Token，且該 Token 可取得相同的目前使用者資料。
@@ -398,19 +402,91 @@ public class AuthApiTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
+    /// <summary>
+    /// 驗證 Development 環境已設定的前端來源可通過註冊 API 的 CORS 預檢。
+    /// </summary>
+    [Test]
+    public async Task RegisterPreflight_WhenOriginIsConfigured_ReturnsAllowedOrigin()
+    {
+        // 準備
+        await using var factory = new AuthApiFactory(
+            environment: DevelopmentEnvironment,
+            allowedCorsOrigin: AllowedCorsOrigin);
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Options, RegisterPath);
+        request.Headers.Add("Origin", AllowedCorsOrigin);
+        request.Headers.Add("Access-Control-Request-Method", HttpMethod.Post.Method);
+        request.Headers.Add("Access-Control-Request-Headers", "content-type");
+
+        // 執行
+        var response = await client.SendAsync(request);
+
+        // 驗證
+        var containsAllowedOrigin = response.Headers.TryGetValues(
+            "Access-Control-Allow-Origin",
+            out var allowedOrigins);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            Assert.That(containsAllowedOrigin, Is.True);
+            Assert.That(allowedOrigins ?? [], Does.Contain(AllowedCorsOrigin));
+        });
+    }
+
+    /// <summary>
+    /// 驗證 Development 環境未設定的前端來源無法取得 CORS 允許標頭。
+    /// </summary>
+    [Test]
+    public async Task RegisterPreflight_WhenOriginIsNotConfigured_DoesNotReturnAllowedOrigin()
+    {
+        // 準備
+        await using var factory = new AuthApiFactory(
+            environment: DevelopmentEnvironment,
+            allowedCorsOrigin: AllowedCorsOrigin);
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Options, RegisterPath);
+        request.Headers.Add("Origin", DeniedCorsOrigin);
+        request.Headers.Add("Access-Control-Request-Method", HttpMethod.Post.Method);
+        request.Headers.Add("Access-Control-Request-Headers", "content-type");
+
+        // 執行
+        var response = await client.SendAsync(request);
+
+        // 驗證
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            Assert.That(response.Headers.Contains("Access-Control-Allow-Origin"), Is.False);
+        });
+    }
+
     private sealed class AuthApiFactory : WebApplicationFactory<Program>
     {
         private readonly string _databaseName = $"AuthApiTests-{Guid.NewGuid()}";
         private readonly IAuthService? _authService;
+        private readonly string _environment;
+        private readonly string? _allowedCorsOrigin;
 
-        public AuthApiFactory(IAuthService? authService = null)
+        public AuthApiFactory(
+            IAuthService? authService = null,
+            string environment = TestingEnvironment,
+            string? allowedCorsOrigin = null)
         {
             _authService = authService;
+            _environment = environment;
+            _allowedCorsOrigin = allowedCorsOrigin;
         }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            builder.UseEnvironment("Testing");
+            builder.UseEnvironment(_environment);
+
+            if (_allowedCorsOrigin is not null)
+            {
+                builder.UseSetting("Cors:AllowedOrigins:0", _allowedCorsOrigin);
+            }
+
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
