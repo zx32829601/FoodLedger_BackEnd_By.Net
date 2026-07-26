@@ -133,6 +133,12 @@ FoodLedger_BackEnd_By.Net/
 └─ README.md
 ```
 
+## 規格文件
+
+- [自訂 Auth API 與統一 API 錯誤回應規格](docs/specs/auth-and-api-error-response.md)
+- [通用 DefinedCode 代碼架構規格](docs/specs/defined-codes.md)
+- [主要 DailyRecord 飲食紀錄功能規格](docs/specs/daily-records.md)
+
 ## 技術棧
 
 - .NET 10
