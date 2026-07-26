@@ -1,0 +1,51 @@
+@startuml
+title FoodLedger 目前系統架構圖
+
+skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam shadowing false
+left to right direction
+
+actor "使用者" as User
+actor "開發者" as Developer
+
+node "前端專案" as Frontend {
+  component "React Web\nFoodLedger_FrontEnd" as Web
+}
+
+node "後端服務" as Backend {
+  component "ASP.NET Core Web API\nFoodLedger" as Api
+}
+
+database "PostgreSQL\nFoodledger DB" as Db
+
+node "監控與觀察" as Observability {
+  component "Aspire Dashboard\n開發期觀察" as Aspire
+  component "Kibana / ELK\n後續集中式 logs" as Elk
+}
+
+User -right-> Web : 操作畫面
+Web -right-> Api : JSON API\nBearer Token
+Api -right-> Db : EF Core / Npgsql
+Developer -down-> Aspire : 查看本機服務狀態
+Api -down-> Aspire : logs / traces / health
+Developer -down-> Elk
+Api ..down..> Elk : 後續導入 logs
+
+note right of Api
+後端負責：
+- Auth / Identity
+- DailyRecord
+- DefinedCode
+- Nutrition Summary
+end note
+
+note bottom of Db
+資料庫保存：
+- 使用者
+- 食物與營養素
+- 每日飲食紀錄
+- 通用代碼
+end note
+
+@enduml

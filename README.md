@@ -146,6 +146,12 @@ FoodLedger_BackEnd_By.Net/
 - [主要 DailyRecord 飲食紀錄功能規格](docs/specs/daily-records.md)
 - [Nutrition Summary 營養素統計規格](docs/specs/nutrition-summary.md)
 
+## UML 圖表
+
+- [主要使用者流程 UML Activity Diagram](docs/diagrams/main-user-flow.puml)
+- [目前系統架構圖](docs/diagrams/system-architecture.puml)
+- [CI/CD 流程圖](docs/diagrams/cicd-flow.puml)
+
 ## 技術棧
 
 - .NET 10
