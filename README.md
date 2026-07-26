@@ -280,7 +280,7 @@ docker compose down
 
 ## Jenkins 本機 Pipeline
 
-本機 Jenkins 可使用根目錄 `Jenkinsfile` 執行 CI 驗證，並在需要時手動觸發本機 Docker Compose 部署。
+本機 Jenkins 可使用根目錄 `Jenkinsfile` 執行 CI 驗證，並在偵測到 Git 更新後自動觸發本機 Docker Compose 部署。
 
 Jenkins 執行環境需可使用：
 
@@ -308,13 +308,17 @@ Branch: */chore/add-docker-cicd-flow
 Script Path: Jenkinsfile
 ```
 
-`Jenkinsfile` 預設只會執行 restore、build、test 與 `docker compose config --quiet`。Compose 驗證階段會使用 Jenkinsfile 內的 CI-only 範例環境變數，不會使用正式密碼，也不會提交 `.env`。
+`Jenkinsfile` 會使用 `pollSCM('H/2 * * * *')` 讓 Jenkins 約每 2 分鐘檢查一次 Git 是否有新 commit。當偵測到目標分支更新時，Jenkins 會自動執行 restore、build、test、Compose 設定驗證與 Local Deploy。
 
-若要讓 Jenkins 執行本機部署，請在 Build with Parameters 時勾選：
+Compose 驗證階段會使用 Jenkinsfile 內的 CI-only 範例環境變數，不會使用正式密碼，也不會提交 `.env`。
+
+`RUN_LOCAL_DEPLOY` 預設為：
 
 ```text
 RUN_LOCAL_DEPLOY=true
 ```
+
+若只想執行 CI 驗證、不重新部署 Docker container，可在手動 Build with Parameters 時改成 `RUN_LOCAL_DEPLOY=false`。
 
 `DOCKER_CLI_BIN` 預設為本機 Docker Desktop 使用者安裝路徑：
 
