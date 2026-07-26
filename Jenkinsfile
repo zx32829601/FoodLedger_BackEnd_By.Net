@@ -20,6 +20,16 @@ pipeline {
             defaultValue: 'C:\\Users\\zx328\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin',
             description: 'Directory that contains docker.exe on the Jenkins machine.'
         )
+        string(
+            name: 'ASPNETCORE_ENVIRONMENT',
+            defaultValue: 'Production',
+            description: 'ASP.NET Core environment used by the deployed API container.'
+        )
+        string(
+            name: 'FOODLEDGER_CORS_ALLOWED_ORIGIN',
+            defaultValue: 'http://localhost:8080',
+            description: 'Exact frontend origin allowed to call the API, without a trailing path.'
+        )
     }
 
     environment {
@@ -71,7 +81,9 @@ pipeline {
                     'POSTGRES_USER=postgres',
                     'POSTGRES_PASSWORD=jenkins-ci-only-password',
                     'POSTGRES_HOST_PORT=5432',
-                    'FOODLEDGER_API_HTTP_PORT=5062'
+                    'FOODLEDGER_API_HTTP_PORT=5062',
+                    "ASPNETCORE_ENVIRONMENT=${params.ASPNETCORE_ENVIRONMENT}",
+                    "FOODLEDGER_CORS_ALLOWED_ORIGIN=${params.FOODLEDGER_CORS_ALLOWED_ORIGIN}"
                 ]) {
                     powershell "& './scripts/Invoke-DockerCompose.ps1' -ArgumentList @('config', '--quiet')"
                 }
@@ -86,7 +98,11 @@ pipeline {
             }
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
-                    withEnv(["PATH=${params.DOCKER_CLI_BIN};${env.DOCKER_DESKTOP_MACHINE_BIN};${env.DOCKER_DESKTOP_USER_BIN};${env.PATH}"]) {
+                    withEnv([
+                        "PATH=${params.DOCKER_CLI_BIN};${env.DOCKER_DESKTOP_MACHINE_BIN};${env.DOCKER_DESKTOP_USER_BIN};${env.PATH}",
+                        "ASPNETCORE_ENVIRONMENT=${params.ASPNETCORE_ENVIRONMENT}",
+                        "FOODLEDGER_CORS_ALLOWED_ORIGIN=${params.FOODLEDGER_CORS_ALLOWED_ORIGIN}"
+                    ]) {
                         powershell "& './scripts/deploy-local.ps1'"
                     }
                 }

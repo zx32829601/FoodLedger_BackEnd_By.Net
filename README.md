@@ -259,6 +259,19 @@ docker compose up --build
 http://localhost:5062/swagger
 ```
 
+### 前端 CORS 設定
+
+`FOODLEDGER_CORS_ALLOWED_ORIGIN` 必須填寫完整前端 Origin，也就是「協定 + 主機 + 連接埠」，不可包含路徑或萬用字元。例如 Jenkins 將前端部署在同一台主機的 `8080`：
+
+```dotenv
+ASPNETCORE_ENVIRONMENT=Production
+FOODLEDGER_CORS_ALLOWED_ORIGIN=http://192.168.0.177:8080
+```
+
+後端會將此值傳入 `Cors__AllowedOrigins__0`。Production 只允許明確列出的 Origin；Development 額外允許 `localhost` 與 `127.0.0.1`，方便本機開發。CORS 不會讓網站繞過登入或授權，但設定成任意 Origin 會不必要地擴大哪些網站能從瀏覽器呼叫 API，因此正式環境不使用 `AllowAnyOrigin`。
+
+若前端與 API 由反向代理提供相同 Origin，瀏覽器不會進入跨 Origin 流程，可不設定允許來源。Production 不會啟用 Swagger UI。
+
 ### 本機部署腳本
 
 本機部署腳本會檢查 Docker CLI、Docker daemon、`.env` 與 `docker-compose.yml`，再以 detached mode 啟動 Web API 與 PostgreSQL。
@@ -305,13 +318,22 @@ Pipeline: Pipeline script from SCM
 SCM: Git
 Repository URL: https://github.com/zx32829601/FoodLedger_BackEnd_By.Net
 Credentials: 使用 Jenkins UI 建立的 GitHub PAT credential
-Branch: */chore/add-docker-cicd-flow
+Branch: */<部署分支>
 Script Path: Jenkinsfile
 ```
 
 `Jenkinsfile` 會使用 `pollSCM('H/2 * * * *')` 讓 Jenkins 約每 2 分鐘檢查一次 Git 是否有新 commit。當偵測到目標分支更新時，Jenkins 會自動執行 restore、build、test、Compose 設定驗證與 Local Deploy。
 
 Compose 驗證階段會使用 Jenkinsfile 內的 CI-only 範例環境變數，不會使用正式密碼，也不會提交 `.env`。
+
+Jenkins 部署預設使用以下參數：
+
+```text
+ASPNETCORE_ENVIRONMENT=Production
+FOODLEDGER_CORS_ALLOWED_ORIGIN=http://localhost:8080
+```
+
+若同一 Wi-Fi 的其他裝置會用區網 IP 開啟前端，請在 Build with Parameters 將 `FOODLEDGER_CORS_ALLOWED_ORIGIN` 改成實際前端 Origin，例如 `http://192.168.0.177:8080`。前端 Docker build 的 `FOOD_LEDGER_API_BASE_URL` 也必須使用瀏覽器可連線的後端區網 URL，不能使用 `localhost`。
 
 `RUN_LOCAL_DEPLOY` 預設為：
 

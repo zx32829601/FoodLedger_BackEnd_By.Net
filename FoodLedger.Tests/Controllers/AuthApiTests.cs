@@ -30,7 +30,9 @@ public class AuthApiTests
     private const string BuiltInLoginPath = "/login";
     private const string AllowedCorsOrigin = "http://192.168.10.50:8180";
     private const string DeniedCorsOrigin = "http://192.168.10.51:8180";
+    private const string LoopbackCorsOrigin = "http://localhost:8180";
     private const string DevelopmentEnvironment = "Development";
+    private const string ProductionEnvironment = "Production";
     private const string TestingEnvironment = "Testing";
 
     /// <summary>
@@ -431,6 +433,92 @@ public class AuthApiTests
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
             Assert.That(containsAllowedOrigin, Is.True);
             Assert.That(allowedOrigins ?? [], Does.Contain(AllowedCorsOrigin));
+        });
+    }
+
+    /// <summary>
+    /// 驗證 Production 環境已設定的前端來源可通過註冊 API 的 CORS 預檢。
+    /// </summary>
+    [Test]
+    public async Task RegisterPreflight_WhenProductionOriginIsConfigured_ReturnsAllowedOrigin()
+    {
+        // 準備
+        await using var factory = new AuthApiFactory(
+            environment: ProductionEnvironment,
+            allowedCorsOrigin: AllowedCorsOrigin);
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Options, RegisterPath);
+        request.Headers.Add("Origin", AllowedCorsOrigin);
+        request.Headers.Add("Access-Control-Request-Method", HttpMethod.Post.Method);
+        request.Headers.Add("Access-Control-Request-Headers", "content-type");
+
+        // 執行
+        var response = await client.SendAsync(request);
+
+        // 驗證
+        var containsAllowedOrigin = response.Headers.TryGetValues(
+            "Access-Control-Allow-Origin",
+            out var allowedOrigins);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            Assert.That(containsAllowedOrigin, Is.True);
+            Assert.That(allowedOrigins ?? [], Does.Contain(AllowedCorsOrigin));
+        });
+    }
+
+    /// <summary>
+    /// 驗證 Production 環境未設定的前端來源無法取得 CORS 允許標頭。
+    /// </summary>
+    [Test]
+    public async Task RegisterPreflight_WhenProductionOriginIsNotConfigured_DoesNotReturnAllowedOrigin()
+    {
+        // 準備
+        await using var factory = new AuthApiFactory(
+            environment: ProductionEnvironment,
+            allowedCorsOrigin: AllowedCorsOrigin);
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Options, RegisterPath);
+        request.Headers.Add("Origin", DeniedCorsOrigin);
+        request.Headers.Add("Access-Control-Request-Method", HttpMethod.Post.Method);
+        request.Headers.Add("Access-Control-Request-Headers", "content-type");
+
+        // 執行
+        var response = await client.SendAsync(request);
+
+        // 驗證
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            Assert.That(response.Headers.Contains("Access-Control-Allow-Origin"), Is.False);
+        });
+    }
+
+    /// <summary>
+    /// 驗證 Production 環境不會套用 Development 的 loopback 自動放行規則。
+    /// </summary>
+    [Test]
+    public async Task RegisterPreflight_WhenProductionLoopbackOriginIsNotConfigured_DoesNotReturnAllowedOrigin()
+    {
+        // 準備
+        await using var factory = new AuthApiFactory(
+            environment: ProductionEnvironment,
+            allowedCorsOrigin: AllowedCorsOrigin);
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Options, RegisterPath);
+        request.Headers.Add("Origin", LoopbackCorsOrigin);
+        request.Headers.Add("Access-Control-Request-Method", HttpMethod.Post.Method);
+        request.Headers.Add("Access-Control-Request-Headers", "content-type");
+
+        // 執行
+        var response = await client.SendAsync(request);
+
+        // 驗證
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            Assert.That(response.Headers.Contains("Access-Control-Allow-Origin"), Is.False);
         });
     }
 
