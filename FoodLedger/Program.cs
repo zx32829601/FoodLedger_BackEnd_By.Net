@@ -4,6 +4,7 @@ using FoodLedger.Infrastructure.Mvc;
 using FoodLedger.Security;
 using FoodLedger.Services;
 using FoodLedger.Swagger;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
@@ -29,8 +30,48 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-builder.Services.AddAuthentication(IdentityConstants.BearerScheme)
-    .AddBearerToken(IdentityConstants.BearerScheme);
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = AuthenticationSchemeNames.Combined;
+        options.DefaultChallengeScheme = AuthenticationSchemeNames.Combined;
+        options.DefaultSignInScheme = AuthenticationSchemeNames.WebCookie;
+    })
+    .AddPolicyScheme(
+        AuthenticationSchemeNames.Combined,
+        displayName: null,
+        options =>
+        {
+            options.ForwardDefaultSelector = context =>
+            {
+                var authorizationHeader = context.Request.Headers.Authorization.ToString();
+                return authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                    ? IdentityConstants.BearerScheme
+                    : AuthenticationSchemeNames.WebCookie;
+            };
+        })
+    .AddBearerToken(IdentityConstants.BearerScheme)
+    .AddCookie(
+        AuthenticationSchemeNames.WebCookie,
+        options =>
+        {
+            options.Cookie.Name = "__Host-FoodLedger.Auth";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.Cookie.Path = "/";
+            options.SlidingExpiration = true;
+            options.Events.OnRedirectToLogin = context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            };
+            options.Events.OnRedirectToAccessDenied = context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            };
+        });
 
 builder.Services
     .AddIdentityCore<ApplicationUser>(options =>
@@ -55,8 +96,18 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDailyRecordService, DailyRecordService>();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.Name = "__Host-FoodLedger.Antiforgery";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.Path = "/";
+});
 
 builder.Services.AddApplicationAuthorization();
+builder.Services.AddScoped<CookieAntiforgeryFilter>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCorsPolicy, policy =>
@@ -69,7 +120,8 @@ builder.Services.AddCors(options =>
                         && (uri.Host == "localhost" || uri.Host == "127.0.0.1"))
                     || configuredCorsOrigins.Contains(origin)))
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 

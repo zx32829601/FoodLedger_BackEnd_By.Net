@@ -2,6 +2,8 @@ using FoodLedger.DTOs.Auth;
 using FoodLedger.DTOs.Errors;
 using FoodLedger.Infrastructure.Authentication;
 using FoodLedger.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,7 +13,7 @@ namespace FoodLedger.Controllers;
 /// 提供 FoodLedger 自訂註冊與登入 API。
 /// </summary>
 [ApiController]
-[AllowAnonymous]
+[Authorize]
 [Route("api/auth")]
 public sealed class AuthController : ControllerBase
 {
@@ -50,14 +52,27 @@ public sealed class AuthController : ControllerBase
     /// }
     /// </code>
     /// </example>
+    /// <param name="useCookies">
+    /// Web client 設為 <see langword="true" /> 時建立 HttpOnly Identity Cookie；
+    /// 預設回傳供行動端使用的 Bearer Token。
+    /// </param>
     [HttpPost("register")]
+    [AllowAnonymous]
+    [CookieAntiforgery]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<AuthResponse>> RegisterAsync(RegisterRequest request)
+    public async Task<ActionResult<AuthResponse>> RegisterAsync(
+        RegisterRequest request,
+        [FromQuery] bool useCookies = false)
     {
         var result = await _authService.RegisterAsync(request);
         if (result is AuthServiceSuccess success)
         {
+            if (useCookies)
+            {
+                return Ok(await _tokenResponseFactory.CreateCookieAsync(HttpContext, success.User));
+            }
+
             return Ok(await _tokenResponseFactory.CreateAsync(HttpContext, success.User));
         }
 
@@ -105,14 +120,27 @@ public sealed class AuthController : ControllerBase
     /// }
     /// </code>
     /// </example>
+    /// <param name="useCookies">
+    /// Web client 設為 <see langword="true" /> 時建立 HttpOnly Identity Cookie；
+    /// 預設回傳供行動端使用的 Bearer Token。
+    /// </param>
     [HttpPost("login")]
+    [AllowAnonymous]
+    [CookieAntiforgery]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<AuthResponse>> LoginAsync(LoginRequest request)
+    public async Task<ActionResult<AuthResponse>> LoginAsync(
+        LoginRequest request,
+        [FromQuery] bool useCookies = false)
     {
         var result = await _authService.LoginAsync(request);
         if (result is AuthServiceSuccess success)
         {
+            if (useCookies)
+            {
+                return Ok(await _tokenResponseFactory.CreateCookieAsync(HttpContext, success.User));
+            }
+
             return Ok(await _tokenResponseFactory.CreateAsync(HttpContext, success.User));
         }
 
@@ -125,6 +153,43 @@ public sealed class AuthController : ControllerBase
             Code = failure.ErrorCode,
             Message = failure.ErrorMessage,
             TraceId = HttpContext.TraceIdentifier,
+        });
+    }
+
+    /// <summary>
+    /// 清除目前 Web 使用者的 Identity Cookie Session。
+    /// </summary>
+    /// <returns>Cookie 清除完成後回傳 <c>204 No Content</c>。</returns>
+    /// <remarks>
+    /// 此端點只負責 Web Cookie 登出；行動端 Bearer Token 的撤銷與 Refresh Token
+    /// 管理應由後續完整 Token lifecycle 功能處理。
+    /// </remarks>
+    [HttpPost("logout")]
+    [CookieAntiforgery]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> LogoutAsync()
+    {
+        await HttpContext.SignOutAsync(AuthenticationSchemeNames.WebCookie);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// 建立 Web Cookie 狀態變更 request 所需的 Antiforgery Token。
+    /// </summary>
+    /// <param name="antiforgery">ASP.NET Core Antiforgery Token 服務。</param>
+    /// <returns>必須放入 <c>X-CSRF-TOKEN</c> Header 的 request token。</returns>
+    [HttpGet("antiforgery")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AntiforgeryTokenResponse), StatusCodes.Status200OK)]
+    public ActionResult<AntiforgeryTokenResponse> GetAntiforgeryToken(
+        [FromServices] IAntiforgery antiforgery)
+    {
+        var tokens = antiforgery.GetAndStoreTokens(HttpContext);
+        return Ok(new AntiforgeryTokenResponse
+        {
+            RequestToken = tokens.RequestToken
+                ?? throw new InvalidOperationException("Antiforgery Service 未產生 Request Token。"),
         });
     }
 }

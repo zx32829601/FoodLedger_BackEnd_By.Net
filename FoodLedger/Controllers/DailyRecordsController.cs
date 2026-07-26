@@ -1,6 +1,7 @@
 using FoodLedger.DTOs.DailyRecords;
 using FoodLedger.DTOs.Errors;
 using FoodLedger.Infrastructure.Mvc;
+using FoodLedger.Infrastructure.Authentication;
 using FoodLedger.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -91,6 +92,7 @@ public sealed class DailyRecordsController : ControllerBase
     /// </code>
     /// </example>
     [HttpPost]
+    [CookieAntiforgery]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -160,6 +162,7 @@ public sealed class DailyRecordsController : ControllerBase
     /// </code>
     /// </example>
     [HttpDelete("{recordId:long}")]
+    [CookieAntiforgery]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]

@@ -74,4 +74,23 @@ public sealed class IdentityBearerTokenResponseFactory
             httpContext.Response.ContentLength = originalContentLength;
         }
     }
+
+    /// <summary>
+    /// 建立 Web Identity Cookie，並只回傳公開使用者資料。
+    /// </summary>
+    /// <param name="httpContext">目前 API request 的 HTTP context。</param>
+    /// <param name="user">已由 Identity 建立或驗證的使用者。</param>
+    /// <returns>不暴露 Bearer Token 的 Cookie 登入回應。</returns>
+    public async Task<AuthResponse> CreateCookieAsync(
+        HttpContext httpContext,
+        ApplicationUser user)
+    {
+        var principal = await _claimsPrincipalFactory.CreateAsync(user);
+        await httpContext.SignInAsync(AuthenticationSchemeNames.WebCookie, principal);
+
+        return new AuthResponse
+        {
+            User = CurrentUserResponseMapper.Map(user),
+        };
+    }
 }
