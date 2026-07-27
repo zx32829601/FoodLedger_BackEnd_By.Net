@@ -11,6 +11,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     }
 
     public DbSet<DailyRecord> DailyRecords => Set<DailyRecord>();
+    public DbSet<DefinedCode> DefinedCodes => Set<DefinedCode>();
     public DbSet<SimpleFood> SimpleFoods => Set<SimpleFood>();
     public DbSet<SimpleFoodTranslation> SimpleFoodTranslations => Set<SimpleFoodTranslation>();
     public DbSet<SimpleFoodCategory> SimpleFoodCategories => Set<SimpleFoodCategory>();

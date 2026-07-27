@@ -29,6 +29,18 @@ public interface IDailyRecordService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 修改目前登入使用者的一筆每日飲食紀錄。
+    /// </summary>
+    /// <param name="recordId">要修改的飲食紀錄識別碼。</param>
+    /// <param name="request">完整的修改資料。</param>
+    /// <param name="cancellationToken">取消修改作業的通知權杖。</param>
+    /// <returns>代表非同步修改作業的工作。</returns>
+    Task UpdateDailyRecordAsync(
+        long recordId,
+        UpdateDailyRecordRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 刪除目前登入使用者的一筆每日飲食紀錄。
     /// </summary>
     /// <param name="recordId">要刪除的每日飲食紀錄識別碼。</param>

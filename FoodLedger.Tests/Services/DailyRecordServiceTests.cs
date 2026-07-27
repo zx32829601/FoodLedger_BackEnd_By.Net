@@ -56,6 +56,7 @@ public class DailyRecordServiceTests
             FoodId = 1,
             Quantity = 1,
             ConsumedAt = consumedAt,
+            MealTypeCode = "Lunch",
         };
 
         // Act
@@ -167,6 +168,7 @@ public class DailyRecordServiceTests
             FoodId = 1,
             Quantity = 10000m,
             ConsumedAt = FixedUtcNow,
+            MealTypeCode = "Snack",
         };
 
         // Act
@@ -197,6 +199,7 @@ public class DailyRecordServiceTests
             FoodId = 999,
             Quantity = 1,
             ConsumedAt = FixedUtcNow,
+            MealTypeCode = "Snack",
         };
 
         // Act & Assert
@@ -249,6 +252,7 @@ public class DailyRecordServiceTests
             FoodId = 1,
             Quantity = 1,
             ConsumedAt = FixedUtcNow,
+            MealTypeCode = "Snack",
         };
 
         // Act
@@ -279,6 +283,7 @@ public class DailyRecordServiceTests
             FoodId = 1,
             Quantity = 1,
             ConsumedAt = consumedAt,
+            MealTypeCode = "Dinner",
         };
 
         // Act
@@ -635,13 +640,219 @@ public class DailyRecordServiceTests
         });
     }
 
+    /// <summary>
+    /// 驗證新增紀錄時會保存餐別，並將備註前後空白移除。
+    /// </summary>
+    [Test]
+    public async Task CreateDailyRecordAsync_WhenMealTypeIsActive_SavesMealTypeAndTrimmedNote()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        SeedSimpleFood(dbContext);
+        await dbContext.SaveChangesAsync();
+        var service = new DailyRecordService(
+            dbContext,
+            new TestCurrentUserService { UserId = CurrentUserId },
+            new TestTimeProvider(FixedUtcNow));
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = FixedUtcNow,
+            MealTypeCode = "Lunch",
+            Note = "  公司午餐  ",
+        };
+
+        // Act
+        await service.CreateDailyRecordAsync(request);
+
+        // Assert
+        var record = await dbContext.DailyRecords.SingleAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(record.MealTypeCode, Is.EqualTo("Lunch"));
+            Assert.That(record.Note, Is.EqualTo("公司午餐"));
+        });
+    }
+
+    /// <summary>
+    /// 驗證新增紀錄使用停用餐別時，回報穩定欄位驗證錯誤且不寫入資料。
+    /// </summary>
+    [Test]
+    public async Task CreateDailyRecordAsync_WhenMealTypeIsInactive_ThrowsValidationExceptionAndDoesNotWriteDatabase()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        SeedSimpleFood(dbContext);
+        dbContext.DefinedCodes.Single(code =>
+            code.CodeType == DefinedCodeTypes.MealType && code.Code == "Lunch").IsActive = false;
+        await dbContext.SaveChangesAsync();
+        var service = new DailyRecordService(
+            dbContext,
+            new TestCurrentUserService { UserId = CurrentUserId },
+            new TestTimeProvider(FixedUtcNow));
+        var request = new CreateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = FixedUtcNow,
+            MealTypeCode = "Lunch",
+        };
+
+        // Act
+        var exception = Assert.ThrowsAsync<DailyRecordValidationException>(
+            async () => await service.CreateDailyRecordAsync(request));
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception?.FieldName, Is.EqualTo(nameof(CreateDailyRecordRequest.MealTypeCode)));
+            Assert.That(exception?.ErrorCode, Is.EqualTo("DailyRecord.InvalidMealType"));
+            Assert.That(dbContext.DailyRecords, Is.Empty);
+        });
+    }
+
+    /// <summary>
+    /// 驗證修改自己的紀錄時可更新所有核心欄位，並正規化 UTC 與空白備註。
+    /// </summary>
+    [Test]
+    public async Task UpdateDailyRecordAsync_WhenRecordBelongsToCurrentUser_UpdatesCoreFields()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        SeedSimpleFood(dbContext);
+        dbContext.SimpleFoods.Add(new SimpleFood { FoodId = 2, FoodCode = "UPDATED_FOOD" });
+        dbContext.DailyRecords.Add(new DailyRecord
+        {
+            RecordId = 1,
+            UserId = CurrentUserId,
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = FixedUtcNow.AddHours(-2),
+            MealTypeCode = "Breakfast",
+        });
+        await dbContext.SaveChangesAsync();
+        var service = new DailyRecordService(
+            dbContext,
+            new TestCurrentUserService { UserId = CurrentUserId },
+            new TestTimeProvider(FixedUtcNow));
+        var consumedAt = new DateTimeOffset(2026, 7, 21, 19, 0, 0, TimeSpan.FromHours(8));
+        var request = new UpdateDailyRecordRequest
+        {
+            FoodId = 2,
+            Quantity = 2.5m,
+            ConsumedAt = consumedAt,
+            MealTypeCode = "Dinner",
+            Note = "   ",
+        };
+
+        // Act
+        await service.UpdateDailyRecordAsync(1, request);
+
+        // Assert
+        var record = await dbContext.DailyRecords.SingleAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(record.FoodId, Is.EqualTo(2));
+            Assert.That(record.Quantity, Is.EqualTo(2.5m));
+            Assert.That(record.ConsumedAt, Is.EqualTo(consumedAt.ToUniversalTime()));
+            Assert.That(record.MealTypeCode, Is.EqualTo("Dinner"));
+            Assert.That(record.Note, Is.Null);
+        });
+    }
+
+    /// <summary>
+    /// 驗證修改其他使用者的紀錄時使用找不到語意，且不改變原始資料。
+    /// </summary>
+    [Test]
+    public async Task UpdateDailyRecordAsync_WhenRecordBelongsToAnotherUser_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        SeedSimpleFood(dbContext);
+        dbContext.DailyRecords.Add(new DailyRecord
+        {
+            RecordId = 1,
+            UserId = 99,
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = FixedUtcNow,
+            MealTypeCode = "Snack",
+        });
+        await dbContext.SaveChangesAsync();
+        var service = new DailyRecordService(
+            dbContext,
+            new TestCurrentUserService { UserId = CurrentUserId },
+            new TestTimeProvider(FixedUtcNow));
+        var request = new UpdateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 2,
+            ConsumedAt = FixedUtcNow,
+            MealTypeCode = "Lunch",
+        };
+
+        // Act & Assert
+        Assert.ThrowsAsync<KeyNotFoundException>(
+            async () => await service.UpdateDailyRecordAsync(1, request));
+        Assert.That((await dbContext.DailyRecords.SingleAsync()).Quantity, Is.EqualTo(1));
+    }
+
+    /// <summary>
+    /// 驗證修改時使用停用餐別會回報穩定驗證錯誤，且保留原始紀錄。
+    /// </summary>
+    [Test]
+    public async Task UpdateDailyRecordAsync_WhenMealTypeIsInactive_ThrowsValidationExceptionAndDoesNotUpdateRecord()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+        SeedSimpleFood(dbContext);
+        dbContext.DailyRecords.Add(new DailyRecord
+        {
+            RecordId = 1,
+            UserId = CurrentUserId,
+            FoodId = 1,
+            Quantity = 1,
+            ConsumedAt = FixedUtcNow,
+            MealTypeCode = "Snack",
+        });
+        dbContext.DefinedCodes.Single(code =>
+            code.CodeType == DefinedCodeTypes.MealType && code.Code == "Lunch").IsActive = false;
+        await dbContext.SaveChangesAsync();
+        var service = new DailyRecordService(
+            dbContext,
+            new TestCurrentUserService { UserId = CurrentUserId },
+            new TestTimeProvider(FixedUtcNow));
+        var request = new UpdateDailyRecordRequest
+        {
+            FoodId = 1,
+            Quantity = 2,
+            ConsumedAt = FixedUtcNow,
+            MealTypeCode = "Lunch",
+        };
+
+        // Act
+        var exception = Assert.ThrowsAsync<DailyRecordValidationException>(
+            async () => await service.UpdateDailyRecordAsync(1, request));
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception?.ErrorCode, Is.EqualTo("DailyRecord.InvalidMealType"));
+            Assert.That((dbContext.DailyRecords.Single()).Quantity, Is.EqualTo(1));
+            Assert.That((dbContext.DailyRecords.Single()).MealTypeCode, Is.EqualTo("Snack"));
+        });
+    }
+
     private static ApplicationDbContext CreateDbContext(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName ?? CreateDatabaseName())
             .Options;
 
-        return new ApplicationDbContext(options);
+        var dbContext = new ApplicationDbContext(options);
+        dbContext.Database.EnsureCreated();
+        return dbContext;
     }
 
     private static string CreateDatabaseName()

@@ -102,6 +102,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IdentityBearerTokenResponseFactory>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDailyRecordService, DailyRecordService>();
+builder.Services.AddScoped<IDefinedCodeService, DefinedCodeService>();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddAntiforgery(options =>

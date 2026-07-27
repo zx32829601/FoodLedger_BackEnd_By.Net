@@ -27,4 +27,14 @@ public sealed class DailyRecordResponse
     /// 實際食用時間，Service 以 UTC 日期區間篩選。
     /// </summary>
     public DateTimeOffset ConsumedAt { get; init; }
+
+    /// <summary>
+    /// 餐別穩定代碼。
+    /// </summary>
+    public string MealTypeCode { get; init; } = string.Empty;
+
+    /// <summary>
+    /// 使用者補充的選填備註。
+    /// </summary>
+    public string? Note { get; init; }
 }

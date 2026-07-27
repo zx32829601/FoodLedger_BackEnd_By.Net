@@ -1,4 +1,5 @@
 using FoodLedger.DTOs.DailyRecords;
+using FoodLedger.DTOs.Errors;
 using FoodLedger.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -61,6 +62,8 @@ public sealed class DailyRecordService : IDailyRecordService
             throw new ArgumentOutOfRangeException(nameof(request.ConsumedAt));
         }
 
+        await ValidateMealTypeAsync(request.MealTypeCode, cancellationToken);
+
         var foodExists = await _dbContext.SimpleFoods
             .AnyAsync(food => food.FoodId == request.FoodId, cancellationToken);
         if (!foodExists)
@@ -74,6 +77,8 @@ public sealed class DailyRecordService : IDailyRecordService
             FoodId = request.FoodId,
             Quantity = request.Quantity,
             ConsumedAt = request.ConsumedAt.ToUniversalTime(),
+            MealTypeCode = request.MealTypeCode,
+            Note = NormalizeNote(request.Note),
         };
 
         _dbContext.DailyRecords.Add(dailyRecord);
@@ -106,8 +111,62 @@ public sealed class DailyRecordService : IDailyRecordService
                 FoodId = record.FoodId,
                 Quantity = record.Quantity,
                 ConsumedAt = record.ConsumedAt,
+                MealTypeCode = record.MealTypeCode,
+                Note = record.Note,
             })
             .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task UpdateDailyRecordAsync(
+        long recordId,
+        UpdateDailyRecordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (_currentUserService.UserId is not { } currentUserId)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        if (request.Quantity <= 0 || request.Quantity > MaximumQuantity)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request.Quantity));
+        }
+
+        if (request.FoodId <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request.FoodId));
+        }
+
+        if (request.ConsumedAt > _timeProvider.GetUtcNow())
+        {
+            throw new ArgumentOutOfRangeException(nameof(request.ConsumedAt));
+        }
+
+        var dailyRecord = await _dbContext.DailyRecords
+            .FirstOrDefaultAsync(record =>
+                record.RecordId == recordId && record.UserId == currentUserId,
+                cancellationToken);
+        if (dailyRecord is null)
+        {
+            throw new KeyNotFoundException($"DailyRecord {recordId} does not exist.");
+        }
+
+        var foodExists = await _dbContext.SimpleFoods
+            .AnyAsync(food => food.FoodId == request.FoodId, cancellationToken);
+        if (!foodExists)
+        {
+            throw new KeyNotFoundException($"Food {request.FoodId} does not exist.");
+        }
+
+        await ValidateMealTypeAsync(request.MealTypeCode, cancellationToken);
+
+        dailyRecord.FoodId = request.FoodId;
+        dailyRecord.Quantity = request.Quantity;
+        dailyRecord.ConsumedAt = request.ConsumedAt.ToUniversalTime();
+        dailyRecord.MealTypeCode = request.MealTypeCode;
+        dailyRecord.Note = NormalizeNote(request.Note);
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     /// <inheritdoc />
@@ -132,5 +191,29 @@ public sealed class DailyRecordService : IDailyRecordService
 
         _dbContext.DailyRecords.Remove(dailyRecord);
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task ValidateMealTypeAsync(
+        string mealTypeCode,
+        CancellationToken cancellationToken)
+    {
+        var isValid = !string.IsNullOrWhiteSpace(mealTypeCode)
+            && await _dbContext.DefinedCodes.AnyAsync(code =>
+                code.CodeType == DefinedCodeTypes.MealType
+                && code.Code == mealTypeCode
+                && code.IsActive,
+                cancellationToken);
+        if (!isValid)
+        {
+            throw new DailyRecordValidationException(
+                nameof(CreateDailyRecordRequest.MealTypeCode),
+                DailyRecordErrorCodes.InvalidMealType);
+        }
+    }
+
+    private static string? NormalizeNote(string? note)
+    {
+        var normalizedNote = note?.Trim();
+        return string.IsNullOrEmpty(normalizedNote) ? null : normalizedNote;
     }
 }
