@@ -16,6 +16,11 @@ namespace FoodLedger.Data.Entities
         [Required]
         public required string NutrientCode { get; set; }
 
+        [Column("unit_code")]
+        [MaxLength(NutrientRules.MaximumUnitCodeLength)]
+        [Required]
+        public string UnitCode { get; set; } = NutrientUnitCodes.Gram;
+
         public virtual ICollection<NutrientTranslation> Translations { get; set; } = [];
 
     }

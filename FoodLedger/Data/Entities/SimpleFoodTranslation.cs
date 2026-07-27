@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using FoodLedger.Models;
 
 namespace FoodLedger.Data.Entities
 {
@@ -19,7 +20,7 @@ namespace FoodLedger.Data.Entities
         public virtual SimpleFood Food { get; set; } = default!;
 
         [Column("lang_code")]
-        [MaxLength(10)]
+        [MaxLength(LocalizationRules.MaximumLangCodeLength)]
         [Required]
         public required string LangCode { get; set; }
 

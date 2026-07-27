@@ -122,6 +122,30 @@ public class ApplicationDbContextModelTests
         });
     }
 
+    /// <summary>
+    /// 驗證 Nutrient 的單位代碼為必要欄位且具有限制長度。
+    /// </summary>
+    [Test]
+    public void NutrientUnitCode_WhenModelIsBuilt_IsRequiredWithMaximumLength()
+    {
+        // Arrange
+        using var dbContext = CreateDbContext();
+        var entityType = dbContext.Model.FindEntityType(typeof(Nutrient));
+
+        // Act
+        var unitCodeProperty = entityType?.FindProperty(nameof(Nutrient.UnitCode));
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(unitCodeProperty, Is.Not.Null);
+            Assert.That(unitCodeProperty!.IsNullable, Is.False);
+            Assert.That(
+                unitCodeProperty.GetMaxLength(),
+                Is.EqualTo(NutrientRules.MaximumUnitCodeLength));
+        });
+    }
+
     private static ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
