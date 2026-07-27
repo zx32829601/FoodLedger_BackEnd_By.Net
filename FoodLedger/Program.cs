@@ -12,9 +12,15 @@ using Microsoft.OpenApi;
 const string FrontendCorsPolicy = "FrontendCorsPolicy";
 const string CorsAllowedOriginsConfigurationKey = "Cors:AllowedOrigins";
 const string ApplyMigrationsOnStartupConfigurationKey = "Database:ApplyMigrationsOnStartup";
+const string InternalTestingEnvironment = "InternalTesting";
 
 var builder = WebApplication.CreateBuilder(args);
 var isDevelopmentEnvironment = builder.Environment.IsDevelopment();
+var isInternalTestingEnvironment =
+    builder.Environment.IsEnvironment(InternalTestingEnvironment);
+var cookieSecurePolicy = isInternalTestingEnvironment
+    ? CookieSecurePolicy.SameAsRequest
+    : CookieSecurePolicy.Always;
 var configuredCorsOrigins = builder.Configuration
     .GetSection(CorsAllowedOriginsConfigurationKey)
     .GetChildren()
@@ -55,9 +61,11 @@ builder.Services
         AuthenticationSchemeNames.WebCookie,
         options =>
         {
-            options.Cookie.Name = "__Host-FoodLedger.Auth";
+            options.Cookie.Name = isInternalTestingEnvironment
+                ? "FoodLedger.Auth"
+                : "__Host-FoodLedger.Auth";
             options.Cookie.HttpOnly = true;
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SecurePolicy = cookieSecurePolicy;
             options.Cookie.SameSite = SameSiteMode.Lax;
             options.Cookie.Path = "/";
             options.SlidingExpiration = true;
@@ -99,9 +107,11 @@ builder.Services.AddProblemDetails();
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-TOKEN";
-    options.Cookie.Name = "__Host-FoodLedger.Antiforgery";
+    options.Cookie.Name = isInternalTestingEnvironment
+        ? "FoodLedger.Antiforgery"
+        : "__Host-FoodLedger.Antiforgery";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SecurePolicy = cookieSecurePolicy;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.Path = "/";
 });
@@ -155,6 +165,12 @@ builder.Services.AddSwaggerGen(options =>
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var app = builder.Build();
 
+if (isInternalTestingEnvironment)
+{
+    app.Logger.LogWarning(
+        "目前使用 InternalTesting：驗證 Cookie 可透過 HTTP 傳送，僅限隔離的內網測試環境。");
+}
+
 if (app.Configuration.GetValue<bool>(ApplyMigrationsOnStartupConfigurationKey))
 {
     await using var migrationScope = app.Services.CreateAsyncScope();
@@ -173,7 +189,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(); // 啟用 Swagger UI 網頁介面
 }
 
-app.UseHttpsRedirection();
+if (!isInternalTestingEnvironment)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors(FrontendCorsPolicy);
 

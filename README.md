@@ -270,11 +270,11 @@ http://localhost:5062/swagger
 `FOODLEDGER_CORS_ALLOWED_ORIGIN` 必須填寫完整前端 Origin，也就是「協定 + 主機 + 連接埠」，不可包含路徑或萬用字元。例如 Jenkins 使用主機 `8080`、前端部署在同一台主機的 `8180`：
 
 ```dotenv
-ASPNETCORE_ENVIRONMENT=Production
+ASPNETCORE_ENVIRONMENT=InternalTesting
 FOODLEDGER_CORS_ALLOWED_ORIGIN=http://192.168.0.177:8180
 ```
 
-後端會將此值傳入 `Cors__AllowedOrigins__0`。Production 只允許明確列出的 Origin；Development 額外允許 `localhost` 與 `127.0.0.1`，方便本機開發。CORS 不會讓網站繞過登入或授權，但設定成任意 Origin 會不必要地擴大哪些網站能從瀏覽器呼叫 API，因此正式環境不使用 `AllowAnyOrigin`。
+後端會將此值傳入 `Cors__AllowedOrigins__0`。InternalTesting 與 Production 都只允許明確列出的 Origin；Development 額外允許 `localhost` 與 `127.0.0.1`，方便本機開發。CORS 不會讓網站繞過登入或授權，但設定成任意 Origin 會不必要地擴大哪些網站能從瀏覽器呼叫 API，因此正式環境不使用 `AllowAnyOrigin`。
 
 若前端與 API 由反向代理提供相同 Origin，瀏覽器不會進入跨 Origin 流程，可不設定允許來源。Production 不會啟用 Swagger UI。
 
@@ -335,9 +335,11 @@ Compose 驗證階段會使用 Jenkinsfile 內的 CI-only 範例環境變數，�
 Jenkins 部署預設使用以下參數：
 
 ```text
-ASPNETCORE_ENVIRONMENT=Production
+ASPNETCORE_ENVIRONMENT=InternalTesting
 FOODLEDGER_CORS_ALLOWED_ORIGIN=
 ```
+
+`InternalTesting` 專供隔離內網的純 HTTP 功能測試。此環境的 Identity 與 Antiforgery Cookie 不使用 `Secure` 或 `__Host-` 前綴，但仍保留 `HttpOnly`、`SameSite=Lax` 與 Antiforgery 驗證。不得將此環境公開到網際網路，也不得使用正式帳密或敏感資料。正式部署必須改用 `ASPNETCORE_ENVIRONMENT=Production` 並在 HTTPS 反向代理後執行；Production 仍強制使用 Secure Cookie。
 
 `FOODLEDGER_CORS_ALLOWED_ORIGIN` 參數留空時，Local Deploy 會沿用 Jenkins workspace 未提交的 `.env` 設定；手動填值時才會覆寫 `.env`。請在部署主機的 `.env` 設定實際前端 Origin，例如 `http://192.168.0.177:8180`。若主機 IP 或前端連接埠改變，只需調整 `.env` 或於 Build with Parameters 暫時覆寫。前端 Docker build 的 `FOOD_LEDGER_API_BASE_URL` 也必須使用瀏覽器可連線的後端區網 URL，不能使用 `localhost`。
 

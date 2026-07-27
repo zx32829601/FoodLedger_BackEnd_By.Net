@@ -163,6 +163,18 @@ options.Cookie.Path = "/";
 - `SameSite=None` 會增加跨站自動帶 Cookie 的機會，必須搭配 Antiforgery Token。
 - 開發環境若使用純 HTTP，需要明確的開發策略；正式環境不可因此降低 `Secure` 要求。
 
+### InternalTesting 純 HTTP 例外
+
+FoodLedger 的 Jenkins 內網功能測試可明確使用 `ASPNETCORE_ENVIRONMENT=InternalTesting`。此環境只為了讓沒有內部 CA 憑證的隔離測試網路可驗證 Cookie 登入流程：
+
+- Identity 與 Antiforgery Cookie 使用 `SameAsRequest`，透過 HTTP 時不設定 `Secure`。
+- Cookie 名稱不使用要求 `Secure` 的 `__Host-` 前綴。
+- 仍保留 `HttpOnly`、`SameSite=Lax` 與 Antiforgery Token。
+- 不執行無法成立的 HTTP 至 HTTPS 重新導向。
+- 不得公開到網際網路，不得使用正式帳密、Token、個資或敏感測試資料。
+
+`Production` 不套用此例外，仍使用 `SecurePolicy.Always` 與 `__Host-` Cookie；正式環境必須由 HTTPS 入口提供服務。
+
 ## 9. FoodLedger 建議流程
 
 ```mermaid

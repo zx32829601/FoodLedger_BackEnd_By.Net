@@ -22,8 +22,8 @@ pipeline {
         )
         string(
             name: 'ASPNETCORE_ENVIRONMENT',
-            defaultValue: 'Production',
-            description: 'ASP.NET Core environment used by the deployed API container.'
+            defaultValue: 'InternalTesting',
+            description: 'ASP.NET Core environment. InternalTesting allows HTTP cookies only for isolated LAN testing.'
         )
         string(
             name: 'FOODLEDGER_CORS_ALLOWED_ORIGIN',
