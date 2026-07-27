@@ -125,7 +125,7 @@ try {
     $apiHttpPort = Get-ApiHttpPort
     Write-Host ""
     Write-Host "Local deploy completed."
-    Write-Host ("Swagger: http://localhost:{0}/swagger" -f $apiHttpPort)
+    Write-Host ("API: http://localhost:{0}" -f $apiHttpPort)
 }
 finally {
     Pop-Location

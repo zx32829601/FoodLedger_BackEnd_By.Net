@@ -36,6 +36,7 @@ public class AuthApiTests
     private const string DeniedCorsOrigin = "http://192.168.10.51:8180";
     private const string LoopbackCorsOrigin = "http://localhost:8180";
     private const string DevelopmentEnvironment = "Development";
+    private const string InternalTestingEnvironment = "InternalTesting";
     private const string ProductionEnvironment = "Production";
     private const string TestingEnvironment = "Testing";
 
@@ -572,6 +573,148 @@ public class AuthApiTests
     }
 
     /// <summary>
+    /// 驗證 InternalTesting 環境可透過 HTTP 取得 Cookie 登入所需的 Antiforgery Token。
+    /// </summary>
+    [Test]
+    public async Task Antiforgery_WhenInternalTestingUsesHttp_ReturnsToken()
+    {
+        // 準備
+        await using var factory = new AuthApiFactory(environment: InternalTestingEnvironment);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("http://localhost"),
+            HandleCookies = true,
+        });
+
+        // 執行
+        var response = await client.GetAsync(AntiforgeryPath);
+
+        // 驗證
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var responseJson = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(
+            responseJson.RootElement.GetProperty("requestToken").GetString(),
+            Is.Not.Null.And.Not.Empty);
+    }
+
+    /// <summary>
+    /// 驗證 InternalTesting 使用 HTTP Cookie 登入後，後續 request 仍可取得目前使用者。
+    /// </summary>
+    [Test]
+    public async Task Login_WhenInternalTestingUsesHttpCookie_AuthenticatesSubsequentRequest()
+    {
+        // 準備
+        await using var factory = new AuthApiFactory(environment: InternalTestingEnvironment);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("http://localhost"),
+            HandleCookies = true,
+        });
+        await client.PostAsJsonAsync(
+            RegisterPath,
+            new
+            {
+                UserAccount = "internal_user",
+                DisplayName = "內部測試使用者",
+                Email = "internal@example.com",
+                Password = ValidPassword,
+            });
+        await AddAntiforgeryTokenAsync(client);
+
+        // 執行
+        var loginResponse = await client.PostAsJsonAsync(
+            CookieLoginPath,
+            new
+            {
+                LoginId = "internal_user",
+                Password = ValidPassword,
+            });
+        var currentUserResponse = await client.GetAsync(CurrentUserPath);
+
+        // 驗證
+        var currentUser = await currentUserResponse.Content
+            .ReadFromJsonAsync<CurrentUserResponse>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(loginResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(currentUserResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(currentUser?.UserAccount, Is.EqualTo("internal_user"));
+        });
+    }
+
+    /// <summary>
+    /// 驗證 InternalTesting 的 HTTP Cookie 不包含 Secure，也不使用要求 HTTPS 的 __Host- 前綴。
+    /// </summary>
+    [Test]
+    public async Task Login_WhenInternalTestingUsesHttp_SetsHttpCompatibleCookies()
+    {
+        // 準備
+        await using var factory = new AuthApiFactory(environment: InternalTestingEnvironment);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("http://localhost"),
+            HandleCookies = true,
+        });
+
+        // 執行
+        var (antiforgeryCookies, loginCookies) = await RegisterAndLoginWithCookieAsync(
+            client,
+            "cookie_attributes_user",
+            "cookie-attributes@example.com");
+
+        // 驗證
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                antiforgeryCookies,
+                Has.Some.StartsWith("foodledger.antiforgery=").And.Not.Contains("; secure"));
+            Assert.That(
+                loginCookies,
+                Has.Some.StartsWith("foodledger.auth=").And.Not.Contains("; secure"));
+            Assert.That(antiforgeryCookies, Has.None.Contains("__host-"));
+            Assert.That(loginCookies, Has.None.Contains("__host-"));
+        });
+    }
+
+    /// <summary>
+    /// 驗證 Production 的 HTTPS Cookie 保留 Secure、HttpOnly、SameSite=Lax 與 __Host- 前綴。
+    /// </summary>
+    [Test]
+    public async Task Login_WhenProductionUsesHttps_PreservesSecureCookieAttributes()
+    {
+        // 準備
+        await using var factory = new AuthApiFactory(environment: ProductionEnvironment);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"),
+            HandleCookies = true,
+        });
+
+        // 執行
+        var (antiforgeryCookies, loginCookies) = await RegisterAndLoginWithCookieAsync(
+            client,
+            "production_cookie_user",
+            "production-cookie@example.com");
+
+        // 驗證
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                antiforgeryCookies,
+                Has.Some.StartsWith("__host-foodledger.antiforgery=")
+                    .And.Contains("; secure")
+                    .And.Contains("httponly")
+                    .And.Contains("samesite=lax"));
+            Assert.That(
+                loginCookies,
+                Has.Some.StartsWith("__host-foodledger.auth=")
+                    .And.Contains("; secure")
+                    .And.Contains("httponly")
+                    .And.Contains("samesite=lax"));
+        });
+    }
+
+    /// <summary>
     /// 驗證 Production 環境已設定的前端來源可通過註冊 API 的 CORS 預檢。
     /// </summary>
     [Test]
@@ -735,6 +878,52 @@ public class AuthApiTests
         client.DefaultRequestHeaders.Add(
             AntiforgeryHeaderName,
             responseJson.RootElement.GetProperty("requestToken").GetString());
+    }
+
+    private static async Task<(string[] AntiforgeryCookies, string[] LoginCookies)>
+        RegisterAndLoginWithCookieAsync(
+            HttpClient client,
+            string userAccount,
+            string email)
+    {
+        using var registerResponse = await client.PostAsJsonAsync(
+            RegisterPath,
+            new
+            {
+                UserAccount = userAccount,
+                DisplayName = $"{userAccount} 使用者",
+                Email = email,
+                Password = ValidPassword,
+            });
+        registerResponse.EnsureSuccessStatusCode();
+
+        using var antiforgeryResponse = await client.GetAsync(AntiforgeryPath);
+        antiforgeryResponse.EnsureSuccessStatusCode();
+        using var antiforgeryJson = JsonDocument.Parse(
+            await antiforgeryResponse.Content.ReadAsStringAsync());
+        client.DefaultRequestHeaders.Remove(AntiforgeryHeaderName);
+        client.DefaultRequestHeaders.Add(
+            AntiforgeryHeaderName,
+            antiforgeryJson.RootElement.GetProperty("requestToken").GetString());
+
+        using var loginResponse = await client.PostAsJsonAsync(
+            CookieLoginPath,
+            new
+            {
+                LoginId = userAccount,
+                Password = ValidPassword,
+            });
+        loginResponse.EnsureSuccessStatusCode();
+
+        return (
+            antiforgeryResponse.Headers
+                .GetValues("Set-Cookie")
+                .Select(cookie => cookie.ToLowerInvariant())
+                .ToArray(),
+            loginResponse.Headers
+                .GetValues("Set-Cookie")
+                .Select(cookie => cookie.ToLowerInvariant())
+                .ToArray());
     }
 
     private sealed class ThrowingAuthService : IAuthService
