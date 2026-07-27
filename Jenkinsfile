@@ -35,6 +35,11 @@ pipeline {
             defaultValue: true,
             description: 'Apply pending EF Core migrations when the API container starts.'
         )
+        booleanParam(
+            name: 'FORCE_DOCKER_REBUILD',
+            defaultValue: false,
+            description: 'Rebuild the API image without Docker build cache.'
+        )
     }
 
     environment {
@@ -116,9 +121,11 @@ pipeline {
                         )
                     }
 
+                    def noCacheArgument = params.FORCE_DOCKER_REBUILD ? '-NoCache' : ''
+
                     timeout(time: 10, unit: 'MINUTES') {
                         withEnv(deploymentEnvironment) {
-                            powershell "& './scripts/deploy-local.ps1'"
+                            powershell "& './scripts/deploy-local.ps1' -Pull ${noCacheArgument}"
                         }
                     }
                 }
@@ -131,6 +138,17 @@ pipeline {
             echo 'Jenkins pipeline completed successfully.'
         }
         failure {
+            script {
+                withEnv(["PATH=${params.DOCKER_CLI_BIN};${env.DOCKER_DESKTOP_MACHINE_BIN};${env.DOCKER_DESKTOP_USER_BIN};${env.PATH}"]) {
+                    powershell returnStatus: true, script: '''
+                        & './scripts/Invoke-DockerCompose.ps1' -ArgumentList @(
+                            'logs',
+                            '--tail=200',
+                            'foodledger-api'
+                        )
+                    '''
+                }
+            }
             echo 'Jenkins pipeline failed. Check the stage logs for details.'
         }
     }
