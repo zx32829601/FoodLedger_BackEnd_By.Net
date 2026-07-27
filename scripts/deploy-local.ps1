@@ -1,5 +1,7 @@
 param(
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$Pull,
+    [switch]$NoCache
 )
 
 Set-StrictMode -Version Latest
@@ -82,14 +84,43 @@ try {
 
     Write-Step "Start local deployment"
     if ($SkipBuild) {
-        & $ComposeScriptPath -ArgumentList @("up", "--detach", "--remove-orphans")
+        & $ComposeScriptPath -ArgumentList @(
+            "up",
+            "--detach",
+            "--force-recreate",
+            "--remove-orphans"
+        )
     }
     else {
-        & $ComposeScriptPath -ArgumentList @("up", "--build", "--detach", "--remove-orphans")
+        $buildArguments = @("build")
+        if ($Pull) {
+            $buildArguments += "--pull"
+        }
+        if ($NoCache) {
+            $buildArguments += "--no-cache"
+        }
+        $buildArguments += "foodledger-api"
+
+        & $ComposeScriptPath -ArgumentList $buildArguments
+        & $ComposeScriptPath -ArgumentList @(
+            "up",
+            "--detach",
+            "--force-recreate",
+            "--remove-orphans"
+        )
     }
 
     Write-Step "Show container status"
     & $ComposeScriptPath -ArgumentList @("ps")
+
+    Write-Step "Show API runtime"
+    & $ComposeScriptPath -ArgumentList @(
+        "exec",
+        "-T",
+        "foodledger-api",
+        "dotnet",
+        "--info"
+    )
 
     $apiHttpPort = Get-ApiHttpPort
     Write-Host ""

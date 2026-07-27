@@ -292,6 +292,20 @@ FOODLEDGER_CORS_ALLOWED_ORIGIN=http://192.168.0.177:8180
 .\scripts\deploy-local.ps1 -SkipBuild
 ```
 
+若要檢查並拉取新版基底 image：
+
+```powershell
+.\scripts\deploy-local.ps1 -Pull
+```
+
+只有在懷疑 Docker build cache 異常時，才使用完整的無快取建置：
+
+```powershell
+.\scripts\deploy-local.ps1 -Pull -NoCache
+```
+
+部署完成後，腳本會自動輸出 API container 的 `dotnet --info`，方便確認實際使用的 .NET 與 ASP.NET Core Runtime。
+
 停止本機容器：
 
 ```powershell
@@ -328,7 +342,7 @@ Branch: */<部署分支>
 Script Path: Jenkinsfile
 ```
 
-`Jenkinsfile` 會使用 `pollSCM('H/2 * * * *')` 讓 Jenkins 約每 2 分鐘檢查一次 Git 是否有新 commit。當偵測到目標分支更新時，Jenkins 會自動執行 restore、build、test、Compose 設定驗證與 Local Deploy。
+`Jenkinsfile` 會使用 `pollSCM('H/2 * * * *')` 讓 Jenkins 約每 2 分鐘檢查一次 Git 是否有新 commit。當偵測到目標分支更新時，Jenkins 會自動執行 restore、build、test、Compose 設定驗證與 Local Deploy。部署時會檢查新版基底 image、強制重新建立 container，並輸出 API container 的 Runtime 資訊；若 Pipeline 失敗，會自動附上 API 最近 200 行 logs。
 
 Compose 驗證階段會使用 Jenkinsfile 內的 CI-only 範例環境變數，不會使用正式密碼，也不會提交 `.env`。
 
@@ -350,6 +364,8 @@ RUN_LOCAL_DEPLOY=true
 ```
 
 若只想執行 CI 驗證、不重新部署 Docker container，可在手動 Build with Parameters 時改成 `RUN_LOCAL_DEPLOY=false`。
+
+`FORCE_DOCKER_REBUILD=false` 會保留 Docker build cache，適合日常部署。只有遇到疑似舊 image 或 cache 異常時，才在 Build with Parameters 勾選 `FORCE_DOCKER_REBUILD`；Jenkins 會對 API image 加上 `--no-cache` 完整重建。
 
 `DOCKER_CLI_BIN` 預設為本機 Docker Desktop 使用者安裝路徑：
 
