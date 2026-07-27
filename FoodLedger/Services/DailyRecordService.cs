@@ -1,5 +1,6 @@
 using FoodLedger.DTOs.DailyRecords;
 using FoodLedger.DTOs.Errors;
+using FoodLedger.DTOs.Foods;
 using FoodLedger.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -109,6 +110,42 @@ public sealed class DailyRecordService : IDailyRecordService
             {
                 RecordId = record.RecordId,
                 FoodId = record.FoodId,
+                Food = new DailyRecordFoodResponse
+                {
+                    FoodId = record.FoodId,
+                    FoodCode = _dbContext.SimpleFoods
+                        .Where(food => food.FoodId == record.FoodId)
+                        .Select(food => food.FoodCode)
+                        .FirstOrDefault() ?? string.Empty,
+                    DisplayName = _dbContext.SimpleFoodTranslations
+                        .Where(translation =>
+                            translation.FoodId == record.FoodId
+                            && (translation.LangCode == FoodSearchRequest.DefaultLangCode
+                                || translation.LangCode == FoodSearchRequest.FallbackLangCode))
+                        .OrderBy(translation =>
+                            translation.LangCode == FoodSearchRequest.DefaultLangCode ? 0 : 1)
+                        .Select(translation => translation.FoodName)
+                        .FirstOrDefault() ?? string.Empty,
+                    LangCode = _dbContext.SimpleFoodTranslations
+                        .Where(translation =>
+                            translation.FoodId == record.FoodId
+                            && (translation.LangCode == FoodSearchRequest.DefaultLangCode
+                                || translation.LangCode == FoodSearchRequest.FallbackLangCode))
+                        .OrderBy(translation =>
+                            translation.LangCode == FoodSearchRequest.DefaultLangCode ? 0 : 1)
+                        .Select(translation => translation.LangCode)
+                        .FirstOrDefault() ?? string.Empty,
+                },
+                Nutrients = _dbContext.FoodNutrients
+                    .Where(nutrient => nutrient.FoodId == record.FoodId)
+                    .OrderBy(nutrient => nutrient.Nutrient.NutrientCode)
+                    .Select(nutrient => new DailyRecordNutrientResponse
+                    {
+                        Code = nutrient.Nutrient.NutrientCode,
+                        Amount = nutrient.Amount * record.Quantity / 100m,
+                        UnitCode = nutrient.Nutrient.UnitCode,
+                    })
+                    .ToArray(),
                 Quantity = record.Quantity,
                 ConsumedAt = record.ConsumedAt,
                 MealTypeCode = record.MealTypeCode,

@@ -104,6 +104,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDailyRecordService, DailyRecordService>();
 builder.Services.AddScoped<IDefinedCodeService, DefinedCodeService>();
 builder.Services.AddScoped<IFoodSearchService, FoodSearchService>();
+builder.Services.AddScoped<IFoodMaintenanceService, FoodMaintenanceService>();
+builder.Services.AddScoped<INutritionSummaryService, NutritionSummaryService>();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddAntiforgery(options =>

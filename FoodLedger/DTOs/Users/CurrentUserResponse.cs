@@ -28,4 +28,9 @@ public sealed class CurrentUserResponse
     /// 目前登入使用者的電子郵件地址。
     /// </summary>
     public required string Email { get; init; }
+
+    /// <summary>
+    /// 指出目前使用者是否具備管理員角色。
+    /// </summary>
+    public bool IsAdmin { get; init; }
 }

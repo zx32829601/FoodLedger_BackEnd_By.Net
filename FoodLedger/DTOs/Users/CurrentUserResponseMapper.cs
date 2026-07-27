@@ -12,7 +12,7 @@ internal static class CurrentUserResponseMapper
     /// </summary>
     /// <param name="user">已由 Identity 建立或驗證的使用者。</param>
     /// <returns>可回傳給 API caller 的使用者基本資料。</returns>
-    public static CurrentUserResponse Map(ApplicationUser user)
+    public static CurrentUserResponse Map(ApplicationUser user, bool isAdmin = false)
     {
         return new CurrentUserResponse
         {
@@ -20,6 +20,7 @@ internal static class CurrentUserResponseMapper
             UserAccount = user.UserName ?? string.Empty,
             DisplayName = user.DisplayName,
             Email = user.Email ?? string.Empty,
+            IsAdmin = isAdmin,
         };
     }
 }

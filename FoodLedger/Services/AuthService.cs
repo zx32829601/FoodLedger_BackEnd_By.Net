@@ -95,7 +95,8 @@ public sealed class AuthService : IAuthService
             return null;
         }
 
-        return CurrentUserResponseMapper.Map(user);
+        var isAdmin = await _userManager.IsInRoleAsync(user, Security.ApplicationRoles.Admin);
+        return CurrentUserResponseMapper.Map(user, isAdmin);
     }
 
     private static AuthServiceResult InvalidCredentials()

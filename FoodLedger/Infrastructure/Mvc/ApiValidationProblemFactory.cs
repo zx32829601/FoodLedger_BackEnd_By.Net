@@ -64,6 +64,7 @@ public static class ApiValidationProblemFactory
         var code = errorMessage.StartsWith("Auth.", StringComparison.Ordinal)
             || errorMessage.StartsWith("DailyRecord.", StringComparison.Ordinal)
             || errorMessage.StartsWith("FoodSearch.", StringComparison.Ordinal)
+            || errorMessage.StartsWith("FoodMaintenance.", StringComparison.Ordinal)
             || errorMessage.StartsWith("Validation.", StringComparison.Ordinal)
                 ? errorMessage
                 : ApiValidationErrorCodes.InvalidValue;
