@@ -90,7 +90,7 @@ pipeline {
                     'POSTGRES_DB=Foodledger',
                     'POSTGRES_USER=postgres',
                     'POSTGRES_PASSWORD=jenkins-ci-only-password',
-                    'POSTGRES_HOST_PORT=5432',
+                    'POSTGRES_HOST_PORT=5433',
                     'FOODLEDGER_API_HTTP_PORT=5062',
                     "ASPNETCORE_ENVIRONMENT=${params.ASPNETCORE_ENVIRONMENT}",
                     "FOODLEDGER_CORS_ALLOWED_ORIGIN=${params.FOODLEDGER_CORS_ALLOWED_ORIGIN}",
@@ -112,6 +112,7 @@ pipeline {
                     def deploymentEnvironment = [
                         "PATH=${params.DOCKER_CLI_BIN};${env.DOCKER_DESKTOP_MACHINE_BIN};${env.DOCKER_DESKTOP_USER_BIN};${env.PATH}",
                         "ASPNETCORE_ENVIRONMENT=${params.ASPNETCORE_ENVIRONMENT}",
+                        "POSTGRES_HOST_PORT=5433",
                         "FOODLEDGER_APPLY_MIGRATIONS_ON_STARTUP=${params.APPLY_DATABASE_MIGRATIONS}"
                     ]
 

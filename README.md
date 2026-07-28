@@ -259,7 +259,7 @@ docker build -f .\FoodLedger\Dockerfile -t foodledger-api:test .
 docker compose up --build
 ```
 
-預設 HTTP 入口由 `.env` 的 `FOODLEDGER_API_HTTP_PORT` 控制，範例值為 `5062`。若本機已經有 PostgreSQL 佔用 `5432`，可調整 `.env` 的 `POSTGRES_HOST_PORT`：
+預設 HTTP 入口由 `.env` 的 `FOODLEDGER_API_HTTP_PORT` 控制，範例值為 `5062`。Docker PostgreSQL 預設映射至主機的 `5433`，容器內仍使用 `5432`；本機資料庫工具請連線至 `localhost:5433`。如需改用其他主機連接埠，可調整 `.env` 的 `POSTGRES_HOST_PORT`：
 
 ```text
 http://localhost:5062/swagger
