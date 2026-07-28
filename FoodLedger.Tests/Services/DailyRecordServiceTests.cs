@@ -8,7 +8,7 @@ namespace FoodLedger.Tests.Services;
 /// <summary>
 /// 驗證 <see cref="DailyRecordService" /> 的每日飲食紀錄商業規則。
 /// </summary>
-public class DailyRecordServiceTests
+public partial class DailyRecordServiceTests
 {
     // 測試用固定目前使用者 ID，用來確認新增紀錄的擁有者來自後端登入狀態。
     private const long CurrentUserId = 42;
@@ -365,7 +365,10 @@ public class DailyRecordServiceTests
         var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
 
         // Act
-        var records = await service.GetDailyRecordsAsync(targetDate);
+        var records = await service.GetDailyRecordsAsync(
+            targetDate,
+            "Etc/UTC",
+            "zh-TW");
 
         // Assert
         var dailyRecord = records.Single();
@@ -419,7 +422,10 @@ public class DailyRecordServiceTests
         var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
 
         // Act
-        var records = await service.GetDailyRecordsAsync(targetDate);
+        var records = await service.GetDailyRecordsAsync(
+            targetDate,
+            "Etc/UTC",
+            "zh-TW");
 
         // Assert
         Assert.That(records.Select(record => record.RecordId), Is.EqualTo(new[] { 1, 2 }));
@@ -464,7 +470,10 @@ public class DailyRecordServiceTests
         var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
 
         // Act
-        var records = await service.GetDailyRecordsAsync(targetDate);
+        var records = await service.GetDailyRecordsAsync(
+            targetDate,
+            "Etc/UTC",
+            "zh-TW");
 
         // Assert
         Assert.That(records.Select(record => record.RecordId), Is.EqualTo(new[] { 2, 3, 1 }));
@@ -510,7 +519,10 @@ public class DailyRecordServiceTests
         var service = new DailyRecordService(dbContext, currentUserService, new TestTimeProvider(FixedUtcNow));
 
         // Act
-        var records = await service.GetDailyRecordsAsync(targetDate);
+        var records = await service.GetDailyRecordsAsync(
+            targetDate,
+            "Etc/UTC",
+            "zh-TW");
 
         // Assert
         Assert.That(records.Select(record => record.RecordId), Is.EqualTo(new[] { 1, 2, 3 }));
@@ -529,7 +541,10 @@ public class DailyRecordServiceTests
 
         // Act & Assert
         Assert.ThrowsAsync<UnauthorizedAccessException>(
-            async () => await service.GetDailyRecordsAsync(new DateOnly(2026, 7, 23)));
+            async () => await service.GetDailyRecordsAsync(
+                new DateOnly(2026, 7, 23),
+                "Etc/UTC",
+                "zh-TW"));
     }
 
     /// <summary>

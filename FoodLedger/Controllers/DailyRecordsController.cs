@@ -5,7 +5,6 @@ using FoodLedger.Infrastructure.Authentication;
 using FoodLedger.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace FoodLedger.Controllers;
 
@@ -33,9 +32,9 @@ public sealed class DailyRecordsController : ControllerBase
     }
 
     /// <summary>
-    /// 查詢目前登入使用者在指定 UTC 日期內的每日飲食紀錄。
+    /// 查詢目前登入使用者在指定本地日期內的每日飲食紀錄。
     /// </summary>
-    /// <param name="date">要查詢的 UTC 日期，格式建議使用 <c>yyyy-MM-dd</c>。</param>
+    /// <param name="request">本地日期、IANA 時區與 BCP 47 語系。</param>
     /// <param name="cancellationToken">取消目前 HTTP request 的通知權杖。</param>
     /// <returns>查詢成功時回傳 <c>200 OK</c> 與飲食紀錄清單。</returns>
     /// <remarks>
@@ -44,7 +43,7 @@ public sealed class DailyRecordsController : ControllerBase
     /// <example>
     /// Request:
     /// <code>
-    /// GET /api/daily-records?date=2026-07-23
+    /// GET /api/daily-records?date=2026-07-23&amp;timeZone=Asia%2FTaipei&amp;langCode=zh-TW
     /// Authorization: Bearer {accessToken}
     /// </code>
     /// </example>
@@ -53,12 +52,16 @@ public sealed class DailyRecordsController : ControllerBase
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetDailyRecords(
-        [FromQuery, BindRequired] DateOnly date,
+        [FromQuery] DailyRecordQueryRequest request,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var records = await _dailyRecordService.GetDailyRecordsAsync(date, cancellationToken);
+            var records = await _dailyRecordService.GetDailyRecordsAsync(
+                request.Date!.Value,
+                request.TimeZone,
+                request.LangCode,
+                cancellationToken);
             return Ok(records);
         }
         catch (UnauthorizedAccessException)

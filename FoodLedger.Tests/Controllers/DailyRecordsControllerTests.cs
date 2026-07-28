@@ -39,7 +39,14 @@ public class DailyRecordsControllerTests
         var cancellationToken = cancellationTokenSource.Token;
 
         // Act
-        var result = await controller.GetDailyRecords(date, cancellationToken);
+        var result = await controller.GetDailyRecords(
+            new DailyRecordQueryRequest
+            {
+                Date = date,
+                TimeZone = "Etc/UTC",
+                LangCode = "zh-TW",
+            },
+            cancellationToken);
 
         // Assert
         var okResult = result as OkObjectResult;
@@ -48,6 +55,8 @@ public class DailyRecordsControllerTests
         {
             Assert.That(okResult!.Value, Is.SameAs(expectedRecords));
             Assert.That(dailyRecordService.ReceivedDate, Is.EqualTo(date));
+            Assert.That(dailyRecordService.ReceivedTimeZone, Is.EqualTo("Etc/UTC"));
+            Assert.That(dailyRecordService.ReceivedLangCode, Is.EqualTo("zh-TW"));
             Assert.That(dailyRecordService.ReceivedGetCancellationToken, Is.EqualTo(cancellationToken));
         });
     }
@@ -63,7 +72,14 @@ public class DailyRecordsControllerTests
         var controller = new DailyRecordsController(dailyRecordService);
 
         // Act
-        var result = await controller.GetDailyRecords(new DateOnly(2026, 7, 23), CancellationToken.None);
+        var result = await controller.GetDailyRecords(
+            new DailyRecordQueryRequest
+            {
+                Date = new DateOnly(2026, 7, 23),
+                TimeZone = "Etc/UTC",
+                LangCode = "zh-TW",
+            },
+            CancellationToken.None);
 
         // Assert
         Assert.That(result, Is.TypeOf<UnauthorizedResult>());
@@ -319,6 +335,10 @@ public class DailyRecordsControllerTests
 
         public UpdateDailyRecordRequest? ReceivedUpdateRequest { get; private set; }
 
+        public string? ReceivedTimeZone { get; private set; }
+
+        public string? ReceivedLangCode { get; private set; }
+
         public CancellationToken ReceivedDeleteCancellationToken { get; private set; }
 
         public IReadOnlyList<DailyRecordResponse> RecordsToReturn { get; init; } = [];
@@ -334,9 +354,13 @@ public class DailyRecordsControllerTests
 
         public Task<IReadOnlyList<DailyRecordResponse>> GetDailyRecordsAsync(
             DateOnly date,
+            string timeZone,
+            string langCode,
             CancellationToken cancellationToken = default)
         {
             ReceivedDate = date;
+            ReceivedTimeZone = timeZone;
+            ReceivedLangCode = langCode;
             ReceivedGetCancellationToken = cancellationToken;
             return Task.FromResult(RecordsToReturn);
         }
@@ -379,6 +403,8 @@ public class DailyRecordsControllerTests
 
         public Task<IReadOnlyList<DailyRecordResponse>> GetDailyRecordsAsync(
             DateOnly date,
+            string timeZone,
+            string langCode,
             CancellationToken cancellationToken = default)
         {
             throw _exception;

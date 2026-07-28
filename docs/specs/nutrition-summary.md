@@ -21,14 +21,15 @@ FoodLedger 的核心價值不只是記錄使用者吃了什麼，也需要讓使
 第一版提供：
 
 ```http
-GET /api/nutrition-summary/daily?date=2026-07-26
-GET /api/nutrition-summary/weekly?date=2026-07-26
+GET /api/nutrition-summary/daily?date=2026-07-26&timeZone=Asia%2FTaipei&langCode=zh-TW
+GET /api/nutrition-summary/weekly?date=2026-07-26&timeZone=Asia%2FTaipei&langCode=zh-TW
+GET /api/nutrients?langCode=zh-TW
 ```
 
 並調整：
 
 ```http
-GET /api/daily-records?date=2026-07-26
+GET /api/daily-records?date=2026-07-26&timeZone=Asia%2FTaipei&langCode=zh-TW
 ```
 
 讓每筆 DailyRecord 明細包含 `foodName` 與計算後的 `nutrients`。
@@ -67,9 +68,13 @@ GET /api/daily-records?date=2026-07-26
 - 第一版支援單日統計與週統計。
 - 第一版不支援月統計。
 - Daily summary API：
-  - `GET /api/nutrition-summary/daily?date=yyyy-MM-dd`
+  - `GET /api/nutrition-summary/daily?date=yyyy-MM-dd&timeZone={IANA}&langCode={BCP47}`
 - Weekly summary API：
-  - `GET /api/nutrition-summary/weekly?date=yyyy-MM-dd`
+  - `GET /api/nutrition-summary/weekly?date=yyyy-MM-dd&timeZone={IANA}&langCode={BCP47}`
+- 建立與編輯食物所需的營養素目錄 API：
+  - `GET /api/nutrients?langCode={BCP47}`
+- DailyRecord 與 Nutrition Summary 使用相同的本地日期、IANA timezone 與語系參數。
+- 翻譯先使用指定語系，再 fallback 到 `en-US`；營養素兩者皆缺少時保留穩定 code，不捨棄數值。
 - Weekly summary 的 `date` 代表焦點日期。
 - 後端依 `date` 計算該日期所在週。
 - 週期固定為週一到週日。
@@ -94,8 +99,7 @@ GET /api/daily-records?date=2026-07-26
   - `nutrients`
 - DailyRecords API 負責紀錄明細。
 - NutritionSummary API 負責統計聚合。
-- 第一版 `foodName` 使用預設語系名稱。
-- 第一版不支援 `language` query parameter。
+- `foodName` 與營養素名稱依 `langCode` 回傳，缺少指定語系時 fallback 到 `en-US`。
 - 第一版 `quantityInGrams` 明確代表克數。
 - 對外 API 使用 `quantityInGrams`，取代語意不明確的 `quantity`。
 - 營養素資料假設以每 100g 為基準。
@@ -112,8 +116,9 @@ GET /api/daily-records?date=2026-07-26
   - `nutrientId`
   - `code`
   - `displayName`
+  - `langCode`
   - `amount`
-  - `unit`
+  - `unitCode`
 
 ## API 契約草稿
 
@@ -134,7 +139,7 @@ Daily records response 每筆紀錄：
       "code": "Protein",
       "displayName": "蛋白質",
       "amount": 46.5,
-      "unit": "g"
+      "unitCode": "g"
     }
   ]
 }
@@ -145,13 +150,14 @@ Daily summary response：
 ```json
 {
   "date": "2026-07-26",
+  "timeZone": "Asia/Taipei",
   "totals": [
     {
       "nutrientId": 1,
       "code": "Protein",
       "displayName": "蛋白質",
       "amount": 95.2,
-      "unit": "g"
+      "unitCode": "g"
     }
   ],
   "mealTypes": [
@@ -163,7 +169,7 @@ Daily summary response：
           "code": "Protein",
           "displayName": "蛋白質",
           "amount": 46.5,
-          "unit": "g"
+          "unitCode": "g"
         }
       ]
     }
@@ -177,13 +183,14 @@ Weekly summary response：
 {
   "startDate": "2026-07-20",
   "endDate": "2026-07-26",
+  "timeZone": "Asia/Taipei",
   "totals": [
     {
       "nutrientId": 1,
       "code": "Protein",
       "displayName": "蛋白質",
       "amount": 520.3,
-      "unit": "g"
+      "unitCode": "g"
     }
   ],
   "days": [
@@ -199,7 +206,7 @@ Weekly summary response：
           "code": "Protein",
           "displayName": "蛋白質",
           "amount": 74.3,
-          "unit": "g"
+          "unitCode": "g"
         }
       ]
     }
@@ -251,7 +258,6 @@ Weekly summary response：
 - 目標攝取量比較。
 - 使用者營養目標。
 - 缺少營養資料的品質提示。
-- 食物名稱多語系參數。
 - 前端顯示格式規則。
 - 依餐別的 weekly breakdown。
 - 快取或統計預計算。
