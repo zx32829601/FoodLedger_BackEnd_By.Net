@@ -16,6 +16,9 @@ internal sealed class NutrientConfiguration : IEntityTypeConfiguration<Nutrient>
         entity.HasIndex(e => e.NutrientCode)
             .IsUnique();
 
+        entity.Property(e => e.UnitCode)
+            .HasDefaultValue(NutrientUnitCodes.Gram);
+
         entity.ConfigureBaseEntity();
     }
 }

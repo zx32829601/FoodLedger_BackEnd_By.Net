@@ -46,7 +46,7 @@ FoodLedger 已具備飲食紀錄 CRUD、餐別與備註，但目前 DailyRecord 
 - FoodNutrient amount 統一表示每 100 克含量。
 - 既有 `perUnit` 不再作為 API 或營養計算依據；migration 應明確選擇移除或保留但停用其業務語意。
 - 食物搜尋 API 使用 GET，支援 `query`、`langCode`、`page` 與 `pageSize`。
-- `query` trim 後至少一個字元。
+- `query` 為選填；空白時回傳指定語系可顯示的全部食物，非空白時以 trim 後的文字篩選。
 - `page` 預設 1；`pageSize` 預設 20，上限 100。
 - 搜尋結果依實際採用翻譯的 food name 排序，再以 food ID 維持穩定順序。
 - 搜尋 response 包含 items、page、pageSize 與 totalCount。

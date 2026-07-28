@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FoodLedger.DTOs.Errors;
+using FoodLedger.DTOs.Foods;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FoodLedger.Infrastructure.Mvc;
@@ -62,6 +63,8 @@ public static class ApiValidationProblemFactory
     {
         var code = errorMessage.StartsWith("Auth.", StringComparison.Ordinal)
             || errorMessage.StartsWith("DailyRecord.", StringComparison.Ordinal)
+            || errorMessage.StartsWith("FoodSearch.", StringComparison.Ordinal)
+            || errorMessage.StartsWith("FoodMaintenance.", StringComparison.Ordinal)
             || errorMessage.StartsWith("Validation.", StringComparison.Ordinal)
                 ? errorMessage
                 : ApiValidationErrorCodes.InvalidValue;
@@ -86,6 +89,10 @@ public static class ApiValidationProblemFactory
                     "數量必須介於 0.001 到 10000 之間。",
                 DailyRecordErrorCodes.ConsumedAtCannotBeFuture =>
                     "食用時間不可晚於目前時間。",
+                FoodSearchErrorCodes.InvalidLangCode => "語系代碼格式不正確。",
+                FoodSearchErrorCodes.PageOutOfRange => "頁碼必須大於或等於 1。",
+                FoodSearchErrorCodes.PageSizeOutOfRange =>
+                    "每頁筆數必須介於 1 到 100 之間。",
                 _ => "欄位值格式不正確。",
             },
             Parameters = code switch
@@ -99,6 +106,17 @@ public static class ApiValidationProblemFactory
                     {
                         ["min"] = 0.001m,
                         ["max"] = 10000m,
+                    },
+                FoodSearchErrorCodes.PageOutOfRange =>
+                    new Dictionary<string, object?>
+                    {
+                        ["min"] = FoodSearchRequest.MinimumPage,
+                    },
+                FoodSearchErrorCodes.PageSizeOutOfRange =>
+                    new Dictionary<string, object?>
+                    {
+                        ["min"] = FoodSearchRequest.MinimumPageSize,
+                        ["max"] = FoodSearchRequest.MaximumPageSize,
                     },
                 _ => null,
             },

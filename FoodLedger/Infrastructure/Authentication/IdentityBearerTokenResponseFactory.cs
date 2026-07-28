@@ -64,7 +64,9 @@ public sealed class IdentityBearerTokenResponseFactory
                 AccessToken = tokenResponse.AccessToken,
                 RefreshToken = tokenResponse.RefreshToken,
                 ExpiresIn = tokenResponse.ExpiresIn,
-                User = CurrentUserResponseMapper.Map(user),
+                User = CurrentUserResponseMapper.Map(
+                    user,
+                    principal.IsInRole(Security.ApplicationRoles.Admin)),
             };
         }
         finally
@@ -90,7 +92,9 @@ public sealed class IdentityBearerTokenResponseFactory
 
         return new AuthResponse
         {
-            User = CurrentUserResponseMapper.Map(user),
+            User = CurrentUserResponseMapper.Map(
+                user,
+                principal.IsInRole(Security.ApplicationRoles.Admin)),
         };
     }
 }

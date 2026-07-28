@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using FoodLedger.Models;
 
 namespace FoodLedger.Data.Entities
 {
@@ -16,7 +17,7 @@ namespace FoodLedger.Data.Entities
         public long CategoryId { get; set; }
 
         [Required]
-        [MaxLength(10)]
+        [MaxLength(LocalizationRules.MaximumLangCodeLength)]
         [Column("lang_code")] // 例如: "zh-TW", "en-US"
         public required string LangCode { get; set; }
 

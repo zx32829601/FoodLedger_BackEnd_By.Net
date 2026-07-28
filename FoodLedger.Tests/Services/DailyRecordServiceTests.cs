@@ -334,6 +334,7 @@ public class DailyRecordServiceTests
         // Arrange
         var targetDate = new DateOnly(2026, 7, 23);
         await using var dbContext = CreateDbContext();
+        SeedSimpleFood(dbContext);
         dbContext.DailyRecords.AddRange(
             new DailyRecord
             {
@@ -372,6 +373,8 @@ public class DailyRecordServiceTests
         {
             Assert.That(dailyRecord.RecordId, Is.EqualTo(1));
             Assert.That(dailyRecord.FoodId, Is.EqualTo(1));
+            Assert.That(dailyRecord.Food.DisplayName, Is.EqualTo("測試食物"));
+            Assert.That(dailyRecord.Food.LangCode, Is.EqualTo("zh-TW"));
             Assert.That(dailyRecord.Quantity, Is.EqualTo(1.5m));
             Assert.That(dailyRecord.ConsumedAt, Is.EqualTo(new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero)));
         });
@@ -866,6 +869,14 @@ public class DailyRecordServiceTests
         {
             FoodId = 1,
             FoodCode = "TEST_FOOD",
+            Translations =
+            [
+                new SimpleFoodTranslation
+                {
+                    LangCode = "zh-TW",
+                    FoodName = "測試食物",
+                },
+            ],
         });
     }
 
