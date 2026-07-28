@@ -6,11 +6,6 @@ namespace FoodLedger.DTOs.Errors;
 public static class FoodSearchErrorCodes
 {
     /// <summary>
-    /// 搜尋文字為空白。
-    /// </summary>
-    public const string QueryRequired = "FoodSearch.QueryRequired";
-
-    /// <summary>
     /// 語系代碼不是支援的 BCP 47 基本格式。
     /// </summary>
     public const string InvalidLangCode = "FoodSearch.InvalidLangCode";

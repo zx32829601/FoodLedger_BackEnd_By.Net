@@ -1,13 +1,21 @@
 using FoodLedger.Data.Entities;
+using FoodLedger.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<long>, long>
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+    private const string SystemActor = "System";
+
+    private readonly ICurrentUserService? _currentUserService;
+
+    public ApplicationDbContext(
+        DbContextOptions<ApplicationDbContext> options,
+        ICurrentUserService? currentUserService = null)
         : base(options)
     {
+        _currentUserService = currentUserService;
     }
 
     public DbSet<DailyRecord> DailyRecords => Set<DailyRecord>();
@@ -142,6 +150,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     private void ApplyAuditValues()
     {
         var now = DateTimeOffset.UtcNow;
+        var actor = string.IsNullOrWhiteSpace(_currentUserService?.UserName)
+            ? SystemActor
+            : _currentUserService!.UserName!;
         var entries = ChangeTracker.Entries<BaseEntity>()
             .Where(e => e.State is EntityState.Added or EntityState.Modified);
 
@@ -150,12 +161,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             if (entityEntry.State == EntityState.Added)
             {
                 entityEntry.Entity.CreatedAt = now;
+                entityEntry.Entity.CreatedBy = actor;
                 entityEntry.Entity.ModifiedAt = now;
                 continue;
             }
 
             entityEntry.Property(nameof(BaseEntity.CreatedAt)).IsModified = false;
+            entityEntry.Property(nameof(BaseEntity.CreatedBy)).IsModified = false;
             entityEntry.Entity.ModifiedAt = now;
+            entityEntry.Entity.ModifiedBy = actor;
         }
 
         var userEntries = ChangeTracker.Entries<ApplicationUser>()

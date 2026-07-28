@@ -89,7 +89,6 @@ public static class ApiValidationProblemFactory
                     "數量必須介於 0.001 到 10000 之間。",
                 DailyRecordErrorCodes.ConsumedAtCannotBeFuture =>
                     "食用時間不可晚於目前時間。",
-                FoodSearchErrorCodes.QueryRequired => "請輸入食物搜尋文字。",
                 FoodSearchErrorCodes.InvalidLangCode => "語系代碼格式不正確。",
                 FoodSearchErrorCodes.PageOutOfRange => "頁碼必須大於或等於 1。",
                 FoodSearchErrorCodes.PageSizeOutOfRange =>

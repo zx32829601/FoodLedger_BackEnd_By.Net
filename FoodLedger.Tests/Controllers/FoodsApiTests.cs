@@ -199,13 +199,19 @@ public class FoodsApiTests
     }
 
     /// <summary>
-    /// 驗證空白搜尋文字會以 query 欄位與穩定錯誤代碼回傳統一 validation response。
+    /// 驗證空白搜尋文字會回傳指定語系可顯示的全部食物。
     /// </summary>
     [Test]
-    public async Task SearchAsync_WhenQueryIsBlank_ReturnsQueryRequiredValidationError()
+    public async Task SearchAsync_WhenQueryIsBlank_ReturnsAllDisplayableFoods()
     {
         // Arrange
         await using var factory = new FoodsApiFactory();
+        await factory.SeedAsync(dbContext =>
+        {
+            dbContext.SimpleFoods.AddRange(
+                CreateFood(1, "FOOD_B", "食物B"),
+                CreateFood(2, "FOOD_A", "食物A"));
+        });
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             TestAuthenticationScheme,
@@ -214,18 +220,16 @@ public class FoodsApiTests
         // Act
         var response = await client.GetAsync("/api/foods?query=%20%20%20");
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var queryErrors = json.RootElement.GetProperty("errors").GetProperty("query");
+        var items = json.RootElement.GetProperty("items");
 
         // Assert
         Assert.Multiple(() =>
         {
-            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-            Assert.That(
-                json.RootElement.GetProperty("code").GetString(),
-                Is.EqualTo("Validation.Failed"));
-            Assert.That(
-                queryErrors[0].GetProperty("code").GetString(),
-                Is.EqualTo("FoodSearch.QueryRequired"));
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(json.RootElement.GetProperty("totalCount").GetInt32(), Is.EqualTo(2));
+            Assert.That(items.GetArrayLength(), Is.EqualTo(2));
+            Assert.That(items[0].GetProperty("foodCode").GetString(), Is.EqualTo("FOOD_A"));
+            Assert.That(items[1].GetProperty("foodCode").GetString(), Is.EqualTo("FOOD_B"));
         });
     }
 

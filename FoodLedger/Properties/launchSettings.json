@@ -25,6 +25,17 @@
       },
       "publishAllPorts": true,
       "useSSL": true
+    },
+    "InternalTesting": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "InternalTesting",
+        "ASPNETCORE_ENVIRONMENT": "InternalTesting",
+        "Cors__AllowedOrigins__0": "http://localhost:8180"
+      },
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5062"
     }
   },
   "$schema": "https://json.schemastore.org/launchsettings.json"

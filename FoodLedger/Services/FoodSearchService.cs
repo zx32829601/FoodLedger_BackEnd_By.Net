@@ -13,7 +13,7 @@ public sealed class FoodSearchService(ApplicationDbContext dbContext) : IFoodSea
         FoodSearchRequest request,
         CancellationToken cancellationToken = default)
     {
-        var queryText = request.Query.Trim();
+        var queryText = request.Query?.Trim() ?? string.Empty;
         var requestedLangCode = request.LangCode.ToLowerInvariant();
         var fallbackLangCode = FoodSearchRequest.FallbackLangCode.ToLowerInvariant();
         var foods = dbContext.SimpleFoods
@@ -34,9 +34,12 @@ public sealed class FoodSearchService(ApplicationDbContext dbContext) : IFoodSea
                     })
                     .FirstOrDefault(),
             })
-            .Where(item =>
-                item.Translation != null
-                && item.Translation.FoodName.Contains(queryText));
+            .Where(item => item.Translation != null);
+
+        if (!string.IsNullOrEmpty(queryText))
+        {
+            foods = foods.Where(item => item.Translation!.FoodName.Contains(queryText));
+        }
 
         var totalCount = await foods.CountAsync(cancellationToken);
         var foodRows = await foods

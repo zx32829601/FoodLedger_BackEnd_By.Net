@@ -13,6 +13,7 @@ appsettings.Development.json
 .env
 .env.*
 !.env.example
+run-local.cmd
 # 注意：雖然 User Secrets 不在專案目錄，但如果有自訂開發設定檔也要排除
 secrets.json
 

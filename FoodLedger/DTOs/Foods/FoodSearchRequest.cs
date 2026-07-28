@@ -41,10 +41,9 @@ public sealed partial class FoodSearchRequest : IValidatableObject
     public const int MaximumPageSize = 100;
 
     /// <summary>
-    /// 食物名稱搜尋文字，trim 後至少一個字元。
+    /// 選填的食物名稱搜尋文字；省略或 trim 後為空白時不套用名稱篩選。
     /// </summary>
-    [Required(ErrorMessage = FoodSearchErrorCodes.QueryRequired)]
-    public string Query { get; init; } = string.Empty;
+    public string? Query { get; init; }
 
     /// <summary>
     /// BCP 47 語系代碼。
@@ -65,11 +64,6 @@ public sealed partial class FoodSearchRequest : IValidatableObject
     /// <inheritdoc />
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (string.IsNullOrWhiteSpace(Query))
-        {
-            yield return new ValidationResult(FoodSearchErrorCodes.QueryRequired, [nameof(Query)]);
-        }
-
         if (!IsValidLangCode(LangCode))
         {
             yield return new ValidationResult(

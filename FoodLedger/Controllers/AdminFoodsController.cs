@@ -17,11 +17,13 @@ namespace FoodLedger.Controllers;
 [Route("api/admin/foods")]
 public sealed class AdminFoodsController(IFoodMaintenanceService service) : ControllerBase
 {
+    private const string GetFoodByIdRouteName = "AdminFoods.GetById";
+
     /// <summary>取得單一食物的完整維護資料。</summary>
     /// <param name="foodId">食物識別碼。</param>
     /// <param name="cancellationToken">取消 request 的通知權杖。</param>
     /// <returns>存在時回傳食物資料，否則回傳 404。</returns>
-    [HttpGet("{foodId:long}")]
+    [HttpGet("{foodId:long}", Name = GetFoodByIdRouteName)]
     [ProducesResponseType(typeof(AdminFoodResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AdminFoodResponse>> GetAsync(
@@ -52,7 +54,10 @@ public sealed class AdminFoodsController(IFoodMaintenanceService service) : Cont
         try
         {
             var response = await service.CreateAsync(request, cancellationToken);
-            return CreatedAtAction(nameof(GetAsync), new { foodId = response.FoodId }, response);
+            return CreatedAtRoute(
+                GetFoodByIdRouteName,
+                new { foodId = response.FoodId },
+                response);
         }
         catch (FoodMaintenanceValidationException exception)
         {
