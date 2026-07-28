@@ -1,4 +1,5 @@
 using FoodLedger.DTOs.Foods;
+using FoodLedger.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoodLedger.Services;
@@ -14,8 +15,9 @@ public sealed class FoodSearchService(ApplicationDbContext dbContext) : IFoodSea
         CancellationToken cancellationToken = default)
     {
         var queryText = request.Query?.Trim() ?? string.Empty;
-        var requestedLangCode = request.LangCode.ToLowerInvariant();
-        var fallbackLangCode = FoodSearchRequest.FallbackLangCode.ToLowerInvariant();
+        var requestedLangCode = LocalizationRules.NormalizeLangCode(request.LangCode);
+        var fallbackLangCode = LocalizationRules.NormalizeLangCode(
+            LocalizationRules.FallbackLangCode);
         var foods = dbContext.SimpleFoods
             .AsNoTracking()
             .Select(food => new

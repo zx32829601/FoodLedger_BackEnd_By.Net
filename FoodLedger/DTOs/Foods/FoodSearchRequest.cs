@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text.RegularExpressions;
 using FoodLedger.DTOs.Errors;
 using FoodLedger.Models;
 
@@ -8,17 +7,17 @@ namespace FoodLedger.DTOs.Foods;
 /// <summary>
 /// 食物搜尋的查詢條件。
 /// </summary>
-public sealed partial class FoodSearchRequest : IValidatableObject
+public sealed class FoodSearchRequest : IValidatableObject
 {
     /// <summary>
     /// 預設使用的繁體中文語系。
     /// </summary>
-    public const string DefaultLangCode = "zh-TW";
+    public const string DefaultLangCode = LocalizationRules.DefaultLangCode;
 
     /// <summary>
     /// 指定語系缺少翻譯時使用的英文語系。
     /// </summary>
-    public const string FallbackLangCode = "en-US";
+    public const string FallbackLangCode = LocalizationRules.FallbackLangCode;
 
     /// <summary>
     /// 預設每頁筆數。
@@ -64,7 +63,7 @@ public sealed partial class FoodSearchRequest : IValidatableObject
     /// <inheritdoc />
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (!IsValidLangCode(LangCode))
+        if (!LocalizationRules.IsValidLangCode(LangCode))
         {
             yield return new ValidationResult(
                 FoodSearchErrorCodes.InvalidLangCode,
@@ -86,19 +85,4 @@ public sealed partial class FoodSearchRequest : IValidatableObject
         }
     }
 
-    private static bool IsValidLangCode(string langCode)
-    {
-        if (string.IsNullOrWhiteSpace(langCode)
-            || langCode.Length > LocalizationRules.MaximumLangCodeLength)
-        {
-            return false;
-        }
-
-        return LangCodePattern().IsMatch(langCode);
-    }
-
-    [GeneratedRegex(
-        @"^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xXiI](?:-[A-Za-z0-9]{1,8})+)$",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex LangCodePattern();
 }

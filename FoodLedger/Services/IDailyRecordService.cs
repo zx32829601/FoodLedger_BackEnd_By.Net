@@ -19,13 +19,17 @@ public interface IDailyRecordService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 查詢目前登入使用者在指定 UTC 日期內的每日飲食紀錄。
+    /// 依指定本地日期、IANA 時區與語系查詢目前使用者的飲食紀錄。
     /// </summary>
-    /// <param name="date">要查詢的 UTC 日期。</param>
-    /// <param name="cancellationToken">取消查詢作業的通知權杖。</param>
-    /// <returns>符合日期與目前登入使用者的每日飲食紀錄清單。</returns>
+    /// <param name="date">使用者選擇的本地日曆日期。</param>
+    /// <param name="timeZone">切分本地日界的 IANA timezone。</param>
+    /// <param name="langCode">食物與營養素名稱使用的 BCP 47 語系代碼。</param>
+    /// <param name="cancellationToken">取消查詢的通知權杖。</param>
+    /// <returns>符合本地日期與目前使用者的飲食紀錄。</returns>
     Task<IReadOnlyList<DailyRecordResponse>> GetDailyRecordsAsync(
         DateOnly date,
+        string timeZone,
+        string langCode,
         CancellationToken cancellationToken = default);
 
     /// <summary>

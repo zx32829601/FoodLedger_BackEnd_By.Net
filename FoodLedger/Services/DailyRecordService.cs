@@ -1,7 +1,7 @@
 using FoodLedger.DTOs.DailyRecords;
 using FoodLedger.DTOs.Errors;
-using FoodLedger.DTOs.Foods;
 using FoodLedger.Data.Entities;
+using FoodLedger.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoodLedger.Services;
@@ -89,6 +89,8 @@ public sealed class DailyRecordService : IDailyRecordService
     /// <inheritdoc />
     public async Task<IReadOnlyList<DailyRecordResponse>> GetDailyRecordsAsync(
         DateOnly date,
+        string timeZone,
+        string langCode,
         CancellationToken cancellationToken = default)
     {
         if (_currentUserService.UserId is not { } currentUserId)
@@ -96,8 +98,14 @@ public sealed class DailyRecordService : IDailyRecordService
             throw new UnauthorizedAccessException();
         }
 
-        var startAt = new DateTimeOffset(date, TimeOnly.MinValue, TimeSpan.Zero);
-        var endAt = startAt.AddDays(1);
+        var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
+        var (startAt, endAt) = LocalDateRange.GetUtcRange(
+            date,
+            date.AddDays(1),
+            timeZoneInfo);
+        var requestedLangCode = LocalizationRules.NormalizeLangCode(langCode);
+        var fallbackLangCode = LocalizationRules.NormalizeLangCode(
+            LocalizationRules.FallbackLangCode);
 
         return await _dbContext.DailyRecords
             .Where(record =>
@@ -106,50 +114,81 @@ public sealed class DailyRecordService : IDailyRecordService
                 && record.ConsumedAt < endAt)
             .OrderBy(record => record.ConsumedAt)
             .ThenBy(record => record.RecordId)
-            .Select(record => new DailyRecordResponse
+            .Select(record => new
             {
-                RecordId = record.RecordId,
-                FoodId = record.FoodId,
+                Record = record,
+                FoodCode = _dbContext.SimpleFoods
+                    .Where(food => food.FoodId == record.FoodId)
+                    .Select(food => food.FoodCode)
+                    .FirstOrDefault(),
+                FoodTranslation = _dbContext.SimpleFoodTranslations
+                    .Where(translation =>
+                        translation.FoodId == record.FoodId
+                        && (translation.LangCode.ToLower() == requestedLangCode
+                            || translation.LangCode.ToLower() == fallbackLangCode))
+                    .OrderBy(translation =>
+                        translation.LangCode.ToLower() == requestedLangCode ? 0 : 1)
+                    .Select(translation => new
+                    {
+                        Name = translation.FoodName,
+                        translation.LangCode,
+                    })
+                    .FirstOrDefault(),
+            })
+            .Select(localizedRecord => new DailyRecordResponse
+            {
+                RecordId = localizedRecord.Record.RecordId,
+                FoodId = localizedRecord.Record.FoodId,
                 Food = new DailyRecordFoodResponse
                 {
-                    FoodId = record.FoodId,
-                    FoodCode = _dbContext.SimpleFoods
-                        .Where(food => food.FoodId == record.FoodId)
-                        .Select(food => food.FoodCode)
-                        .FirstOrDefault() ?? string.Empty,
-                    DisplayName = _dbContext.SimpleFoodTranslations
-                        .Where(translation =>
-                            translation.FoodId == record.FoodId
-                            && (translation.LangCode == FoodSearchRequest.DefaultLangCode
-                                || translation.LangCode == FoodSearchRequest.FallbackLangCode))
-                        .OrderBy(translation =>
-                            translation.LangCode == FoodSearchRequest.DefaultLangCode ? 0 : 1)
-                        .Select(translation => translation.FoodName)
-                        .FirstOrDefault() ?? string.Empty,
-                    LangCode = _dbContext.SimpleFoodTranslations
-                        .Where(translation =>
-                            translation.FoodId == record.FoodId
-                            && (translation.LangCode == FoodSearchRequest.DefaultLangCode
-                                || translation.LangCode == FoodSearchRequest.FallbackLangCode))
-                        .OrderBy(translation =>
-                            translation.LangCode == FoodSearchRequest.DefaultLangCode ? 0 : 1)
-                        .Select(translation => translation.LangCode)
-                        .FirstOrDefault() ?? string.Empty,
+                    FoodId = localizedRecord.Record.FoodId,
+                    FoodCode = localizedRecord.FoodCode ?? string.Empty,
+                    DisplayName = localizedRecord.FoodTranslation == null
+                        ? string.Empty
+                        : localizedRecord.FoodTranslation.Name,
+                    LangCode = localizedRecord.FoodTranslation == null
+                        ? string.Empty
+                        : localizedRecord.FoodTranslation.LangCode,
                 },
                 Nutrients = _dbContext.FoodNutrients
-                    .Where(nutrient => nutrient.FoodId == record.FoodId)
+                    .Where(nutrient => nutrient.FoodId == localizedRecord.Record.FoodId)
                     .OrderBy(nutrient => nutrient.Nutrient.NutrientCode)
-                    .Select(nutrient => new DailyRecordNutrientResponse
+                    .Select(nutrient => new
                     {
-                        Code = nutrient.Nutrient.NutrientCode,
-                        Amount = nutrient.Amount * record.Quantity / 100m,
-                        UnitCode = nutrient.Nutrient.UnitCode,
+                        FoodNutrient = nutrient,
+                        Translation = nutrient.Nutrient.Translations
+                            .Where(translation =>
+                                translation.LangCode.ToLower() == requestedLangCode
+                                || translation.LangCode.ToLower() == fallbackLangCode)
+                            .OrderBy(translation =>
+                                translation.LangCode.ToLower() == requestedLangCode ? 0 : 1)
+                            .Select(translation => new
+                            {
+                                Name = translation.NutrientName,
+                                translation.LangCode,
+                            })
+                            .FirstOrDefault(),
+                    })
+                    .Select(localizedNutrient => new DailyRecordNutrientResponse
+                    {
+                        NutrientId = localizedNutrient.FoodNutrient.NutrientId,
+                        Code = localizedNutrient.FoodNutrient.Nutrient.NutrientCode,
+                        DisplayName = localizedNutrient.Translation == null
+                            ? localizedNutrient.FoodNutrient.Nutrient.NutrientCode
+                            : localizedNutrient.Translation.Name,
+                        LangCode = localizedNutrient.Translation == null
+                            ? null
+                            : localizedNutrient.Translation.LangCode,
+                        Amount = localizedNutrient.FoodNutrient.Amount
+                            * localizedRecord.Record.Quantity
+                            / NutritionCalculationRules.BasisGrams,
+                        UnitCode = localizedNutrient.FoodNutrient.Nutrient.UnitCode,
                     })
                     .ToArray(),
-                Quantity = record.Quantity,
-                ConsumedAt = record.ConsumedAt,
-                MealTypeCode = record.MealTypeCode,
-                Note = record.Note,
+                Quantity = localizedRecord.Record.Quantity,
+                ConsumedAt = localizedRecord.Record.ConsumedAt,
+                MealTypeCode = localizedRecord.Record.MealTypeCode,
+                Note = localizedRecord.Record.Note,
             })
             .ToListAsync(cancellationToken);
     }

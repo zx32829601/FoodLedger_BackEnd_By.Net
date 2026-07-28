@@ -65,6 +65,7 @@ public static class ApiValidationProblemFactory
             || errorMessage.StartsWith("DailyRecord.", StringComparison.Ordinal)
             || errorMessage.StartsWith("FoodSearch.", StringComparison.Ordinal)
             || errorMessage.StartsWith("FoodMaintenance.", StringComparison.Ordinal)
+            || errorMessage.StartsWith("NutritionSummary.", StringComparison.Ordinal)
             || errorMessage.StartsWith("Validation.", StringComparison.Ordinal)
                 ? errorMessage
                 : ApiValidationErrorCodes.InvalidValue;
@@ -74,6 +75,9 @@ public static class ApiValidationProblemFactory
             Code = code,
             Message = code switch
             {
+                NutritionSummaryErrorCodes.DateRequired => "請提供摘要日期。",
+                NutritionSummaryErrorCodes.InvalidTimeZone => "時區代碼不存在或無效。",
+                NutritionSummaryErrorCodes.InvalidLangCode => "語系代碼格式不正確。",
                 ApiValidationErrorCodes.UserAccountInvalid =>
                     "使用者帳號須為 4 到 30 個英文字母、數字、底線或連字號。",
                 ApiValidationErrorCodes.DisplayNameInvalid =>

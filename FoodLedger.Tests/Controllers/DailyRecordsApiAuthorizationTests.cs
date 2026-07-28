@@ -66,7 +66,8 @@ public class DailyRecordsApiAuthorizationTests
         var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
 
         // Act
-        var response = await client.GetAsync("/api/daily-records?date=2026-07-23");
+        var response = await client.GetAsync(
+            "/api/daily-records?date=2026-07-23&timeZone=Etc%2FUTC&langCode=zh-TW");
 
         // Assert
         Assert.Multiple(() =>
@@ -182,7 +183,8 @@ public class DailyRecordsApiAuthorizationTests
         ];
 
         // Act
-        var response = await client.GetAsync("/api/daily-records?date=2026-07-23");
+        var response = await client.GetAsync(
+            "/api/daily-records?date=2026-07-23&timeZone=Etc%2FUTC&langCode=zh-TW");
 
         // Assert
         var records = await response.Content.ReadFromJsonAsync<DailyRecordResponse[]>();
@@ -191,6 +193,8 @@ public class DailyRecordsApiAuthorizationTests
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(dailyRecordService.GetCallCount, Is.EqualTo(1));
             Assert.That(dailyRecordService.ReceivedDate, Is.EqualTo(new DateOnly(2026, 7, 23)));
+            Assert.That(dailyRecordService.ReceivedTimeZone, Is.EqualTo("Etc/UTC"));
+            Assert.That(dailyRecordService.ReceivedLangCode, Is.EqualTo("zh-TW"));
             Assert.That(records, Is.Not.Null);
             Assert.That(records!, Has.Length.EqualTo(1));
             Assert.That(records![0].RecordId, Is.EqualTo(1));
@@ -225,7 +229,8 @@ public class DailyRecordsApiAuthorizationTests
         ];
 
         // Act
-        var response = await client.GetAsync("/api/daily-records?date=2026-07-23");
+        var response = await client.GetAsync(
+            "/api/daily-records?date=2026-07-23&timeZone=Etc%2FUTC&langCode=zh-TW");
 
         // Assert
         await using var responseStream = await response.Content.ReadAsStreamAsync();
@@ -254,7 +259,8 @@ public class DailyRecordsApiAuthorizationTests
         var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
 
         // Act
-        var response = await client.GetAsync("/api/daily-records?date=2026-07-23");
+        var response = await client.GetAsync(
+            "/api/daily-records?date=2026-07-23&timeZone=Etc%2FUTC&langCode=zh-TW");
 
         // Assert
         await using var responseStream = await response.Content.ReadAsStreamAsync();
@@ -266,6 +272,32 @@ public class DailyRecordsApiAuthorizationTests
             Assert.That(records.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Array));
             Assert.That(records.RootElement.GetArrayLength(), Is.EqualTo(0));
             Assert.That(dailyRecordService.GetCallCount, Is.EqualTo(1));
+        });
+    }
+
+    /// <summary>
+    /// 驗證已驗證 request 缺少 IANA 時區時，API 回傳 400 且不進入 Service。
+    /// </summary>
+    [Test]
+    public async Task GetDailyRecords_WhenTimeZoneIsMissing_ReturnsBadRequestAndDoesNotCallService()
+    {
+        // Arrange
+        await using var factory = new DailyRecordsApiFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            TestAuthenticationScheme,
+            "authenticated");
+        var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
+
+        // Act
+        var response = await client.GetAsync(
+            "/api/daily-records?date=2026-07-23&langCode=zh-TW");
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(dailyRecordService.WasCalled, Is.False);
         });
     }
 
@@ -284,7 +316,8 @@ public class DailyRecordsApiAuthorizationTests
         var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
 
         // Act
-        var response = await client.GetAsync("/api/daily-records?date=not-a-date");
+        var response = await client.GetAsync(
+            "/api/daily-records?date=not-a-date&timeZone=Etc%2FUTC&langCode=zh-TW");
 
         // Assert
         Assert.Multiple(() =>
@@ -309,7 +342,8 @@ public class DailyRecordsApiAuthorizationTests
         var dailyRecordService = factory.Services.GetRequiredService<RecordingDailyRecordService>();
 
         // Act
-        var response = await client.GetAsync("/api/daily-records");
+        var response = await client.GetAsync(
+            "/api/daily-records?timeZone=Etc%2FUTC&langCode=zh-TW");
 
         // Assert
         Assert.Multiple(() =>
@@ -767,6 +801,10 @@ public class DailyRecordsApiAuthorizationTests
 
         public DateOnly? ReceivedDate { get; private set; }
 
+        public string? ReceivedTimeZone { get; private set; }
+
+        public string? ReceivedLangCode { get; private set; }
+
         public long? ReceivedDeleteRecordId { get; private set; }
 
         public Exception? DeleteExceptionToThrow { get; set; }
@@ -785,11 +823,15 @@ public class DailyRecordsApiAuthorizationTests
 
         public Task<IReadOnlyList<DailyRecordResponse>> GetDailyRecordsAsync(
             DateOnly date,
+            string timeZone,
+            string langCode,
             CancellationToken cancellationToken = default)
         {
             GetCallCount++;
             WasCalled = true;
             ReceivedDate = date;
+            ReceivedTimeZone = timeZone;
+            ReceivedLangCode = langCode;
             return Task.FromResult(RecordsToReturn);
         }
 

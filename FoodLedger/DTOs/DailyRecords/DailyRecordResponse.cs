@@ -52,8 +52,14 @@ public sealed class DailyRecordResponse
 /// </summary>
 public sealed class DailyRecordNutrientResponse
 {
+    /// <summary>營養素識別碼。</summary>
+    public long NutrientId { get; init; }
     /// <summary>營養素穩定代碼。</summary>
     public string Code { get; init; } = string.Empty;
+    /// <summary>依指定語系 fallback 規則選出的顯示名稱。</summary>
+    public string DisplayName { get; init; } = string.Empty;
+    /// <summary>實際採用的翻譯語系；沒有翻譯而使用 code 時為 null。</summary>
+    public string? LangCode { get; init; }
     /// <summary>換算後數值。</summary>
     public decimal Amount { get; init; }
     /// <summary>營養素單位代碼。</summary>
