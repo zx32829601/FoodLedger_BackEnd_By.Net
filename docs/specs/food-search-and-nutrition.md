@@ -38,7 +38,7 @@ FoodLedger 已具備飲食紀錄 CRUD、餐別與備註，但目前 DailyRecord 
 ## Implementation Decisions
 
 - 本規格在既有 DailyRecord 與 DefinedCode 功能合併後，以獨立後端 PR 實作。
-- 第一版公開份量欄位使用 `quantityGrams`，明確表示克數；資料庫欄位可維持既有名稱，但 Entity、DTO、文件與測試必須表達克數語意。
+- 第一版公開份量欄位使用 `quantityInGrams`，明確表示克數；資料庫欄位可維持既有名稱，但 Entity、DTO、文件與測試必須表達克數語意。
 - 第一版只支援克數，不支援碗、杯、顆、份或毫升。
 - 未來其他份量單位應透過獨立 FoodPortion 模型換算成克數，不改變營養計算核心。
 - Nutrient 增加穩定 `unitCode`；第一版至少支援 `kcal`、`g`、`mg`、`ug`。
@@ -58,7 +58,7 @@ FoodLedger 已具備飲食紀錄 CRUD、餐別與備註，但目前 DailyRecord 
 - 第一版不建立 food detail API；食物詳情未來以獨立功能實作。
 - DailyRecord response 將 `foodId` 改為嵌入專用 food summary DTO，並包含動態營養素。
 - 嵌入資料代表目前版本的食物名稱與營養資料，不保存建立紀錄當下的歷史快照。
-- DailyRecord create、update、get response 的公開份量欄位統一使用 `quantityGrams`。
+- DailyRecord create、update、get response 的公開份量欄位統一使用 `quantityInGrams`。
 - `consumedAt` 仍使用 UTC 傳輸與儲存，且不可晚於伺服器目前時間。
 - 餐別不限制時段；後端不得依 `consumedAt` 推斷或拒絕 Breakfast、Lunch、Dinner、Snack。
 - DailyRecord 與 Nutrition Summary 日期查詢接收本地 `date` 與 IANA `timeZone`。
@@ -66,7 +66,7 @@ FoodLedger 已具備飲食紀錄 CRUD、餐別與備註，但目前 DailyRecord 
 - 無效 IANA timezone 回欄位 validation error，不 fallback 到 UTC。
 - Nutrition Summary API 接收 date、timeZone 與 langCode。
 - Nutrition Summary response 使用動態 nutrient list，包含 code、displayName、amount 與 unitCode。
-- 後端使用 decimal 計算 `amountPer100Grams × quantityGrams ÷ 100`。
+- 後端使用 decimal 計算 `amountPer100Grams × quantityInGrams ÷ 100`。
 - 每筆紀錄換算時不先格式化或四捨五入；全部加總後仍回傳數值型別。
 - 使用者資料隔離一律由目前登入身分決定，不接受前端 UserId。
 - DailyRecord、Food Search 與 Nutrition Summary 使用 DTO projection，不直接暴露 Entity。

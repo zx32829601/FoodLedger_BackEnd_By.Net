@@ -27,9 +27,9 @@ public sealed class DailyRecordResponse
     public IReadOnlyList<DailyRecordNutrientResponse> Nutrients { get; init; } = [];
 
     /// <summary>
-    /// 食用份量。
+    /// 食用份量，單位為克。
     /// </summary>
-    public decimal Quantity { get; init; }
+    public decimal QuantityInGrams { get; init; }
 
     /// <summary>
     /// 實際食用時間，Service 以 UTC 日期區間篩選。

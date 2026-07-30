@@ -39,7 +39,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = DateTimeOffset.UtcNow,
         };
 
@@ -177,7 +177,7 @@ public class DailyRecordsApiAuthorizationTests
             {
                 RecordId = 1,
                 FoodId = 2,
-                Quantity = 1.5m,
+                QuantityInGrams = 1.5m,
                 ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
             },
         ];
@@ -187,7 +187,12 @@ public class DailyRecordsApiAuthorizationTests
             "/api/daily-records?date=2026-07-23&timeZone=Etc%2FUTC&langCode=zh-TW");
 
         // Assert
-        var records = await response.Content.ReadFromJsonAsync<DailyRecordResponse[]>();
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var records = JsonSerializer.Deserialize<DailyRecordResponse[]>(
+            responseBody,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        using var responseJson = JsonDocument.Parse(responseBody);
+        var firstRecord = responseJson.RootElement[0];
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
@@ -199,7 +204,9 @@ public class DailyRecordsApiAuthorizationTests
             Assert.That(records!, Has.Length.EqualTo(1));
             Assert.That(records![0].RecordId, Is.EqualTo(1));
             Assert.That(records[0].FoodId, Is.EqualTo(2));
-            Assert.That(records[0].Quantity, Is.EqualTo(1.5m));
+            Assert.That(records[0].QuantityInGrams, Is.EqualTo(1.5m));
+            Assert.That(firstRecord.TryGetProperty("quantityInGrams", out _), Is.True);
+            Assert.That(firstRecord.TryGetProperty("quantity", out _), Is.False);
         });
     }
 
@@ -223,7 +230,7 @@ public class DailyRecordsApiAuthorizationTests
             {
                 RecordId = 1,
                 FoodId = 2,
-                Quantity = 1.5m,
+                QuantityInGrams = 1.5m,
                 ConsumedAt = expectedConsumedAt,
             },
         ];
@@ -370,7 +377,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 1,
-            Quantity = 1.5m,
+            QuantityInGrams = 1.5m,
             ConsumedAt = consumedAt,
             MealTypeCode = "Lunch",
         };
@@ -384,7 +391,9 @@ public class DailyRecordsApiAuthorizationTests
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
             Assert.That(dailyRecordService.CallCount, Is.EqualTo(1));
             Assert.That(dailyRecordService.ReceivedRequest?.FoodId, Is.EqualTo(request.FoodId));
-            Assert.That(dailyRecordService.ReceivedRequest?.Quantity, Is.EqualTo(request.Quantity));
+            Assert.That(
+                dailyRecordService.ReceivedRequest?.QuantityInGrams,
+                Is.EqualTo(request.QuantityInGrams));
             Assert.That(dailyRecordService.ReceivedRequest?.ConsumedAt, Is.EqualTo(consumedAt));
         });
     }
@@ -405,7 +414,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 0,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
         };
 
@@ -436,7 +445,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 1,
-            Quantity = 0,
+            QuantityInGrams = 0,
             ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
         };
 
@@ -452,7 +461,7 @@ public class DailyRecordsApiAuthorizationTests
     }
 
     /// <summary>
-    /// 驗證食用數量為 0 的統一驗證錯誤內容會包含 lower camel case quantity 欄位。
+    /// 驗證食用數量為 0 的統一驗證錯誤內容會包含 lower camel case quantityInGrams 欄位。
     /// </summary>
     [Test]
     public async Task Create_WhenQuantityIsZero_ReturnsValidationProblemWithQuantityError()
@@ -467,7 +476,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 1,
-            Quantity = 0,
+            QuantityInGrams = 0,
             ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
         };
 
@@ -485,13 +494,13 @@ public class DailyRecordsApiAuthorizationTests
             Assert.That(
                 problemDetails.RootElement.GetProperty("code").GetString(),
                 Is.EqualTo("Validation.Failed"));
-            Assert.That(errors.TryGetProperty("quantity", out _), Is.True);
+            Assert.That(errors.TryGetProperty("quantityInGrams", out _), Is.True);
             Assert.That(dailyRecordService.WasCalled, Is.False);
         });
     }
 
     /// <summary>
-    /// 驗證食用數量為 0 的 quantity 欄位錯誤會以含穩定 code 的非空物件陣列回傳。
+    /// 驗證食用數量為 0 的 quantityInGrams 欄位錯誤會以含穩定 code 的非空物件陣列回傳。
     /// </summary>
     [Test]
     public async Task Create_WhenQuantityIsZero_ReturnsNonEmptyQuantityErrorsArray()
@@ -506,7 +515,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 1,
-            Quantity = 0,
+            QuantityInGrams = 0,
             ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
         };
 
@@ -518,7 +527,7 @@ public class DailyRecordsApiAuthorizationTests
         using var problemDetails = await JsonDocument.ParseAsync(responseStream);
         var quantityErrors = problemDetails.RootElement
             .GetProperty("errors")
-            .GetProperty("quantity");
+            .GetProperty("quantityInGrams");
 
         Assert.Multiple(() =>
         {
@@ -551,7 +560,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 1,
-            Quantity = -1,
+            QuantityInGrams = -1,
             ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
         };
 
@@ -582,7 +591,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 1,
-            Quantity = 10000000m,
+            QuantityInGrams = 10000000m,
             ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
         };
 
@@ -613,7 +622,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 1,
-            Quantity = 10000.001m,
+            QuantityInGrams = 10000.001m,
             ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
         };
 
@@ -645,7 +654,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 1,
-            Quantity = 10000m,
+            QuantityInGrams = 10000m,
             ConsumedAt = consumedAt,
             MealTypeCode = "Snack",
         };
@@ -658,7 +667,9 @@ public class DailyRecordsApiAuthorizationTests
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
             Assert.That(dailyRecordService.CallCount, Is.EqualTo(1));
-            Assert.That(dailyRecordService.ReceivedRequest?.Quantity, Is.EqualTo(request.Quantity));
+            Assert.That(
+                dailyRecordService.ReceivedRequest?.QuantityInGrams,
+                Is.EqualTo(request.QuantityInGrams));
         });
     }
 
@@ -675,7 +686,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
             MealTypeCode = "Lunch",
         };
@@ -707,7 +718,7 @@ public class DailyRecordsApiAuthorizationTests
         var request = new
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = new DateTimeOffset(2026, 7, 22, 12, 0, 0, TimeSpan.Zero),
         };
 

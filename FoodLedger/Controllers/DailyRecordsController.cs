@@ -89,7 +89,7 @@ public sealed class DailyRecordsController : ControllerBase
     /// Authorization: Bearer {accessToken}
     /// {
     ///   "foodId": 1,
-    ///   "quantity": 1,
+    ///   "quantityInGrams": 100,
     ///   "consumedAt": "2026-07-21T12:00:00Z"
     /// }
     /// </code>
@@ -112,9 +112,10 @@ public sealed class DailyRecordsController : ControllerBase
         {
             var errorCode = exception.ParamName switch
             {
-                nameof(CreateDailyRecordRequest.Quantity) when request.Quantity <= 0 =>
+                nameof(CreateDailyRecordRequest.QuantityInGrams)
+                    when request.QuantityInGrams <= 0 =>
                     DailyRecordErrorCodes.QuantityMustBeGreaterThanZero,
-                nameof(CreateDailyRecordRequest.Quantity) =>
+                nameof(CreateDailyRecordRequest.QuantityInGrams) =>
                     DailyRecordErrorCodes.QuantityOutOfRange,
                 nameof(CreateDailyRecordRequest.FoodId) =>
                     DailyRecordErrorCodes.FoodIdInvalid,
@@ -168,7 +169,7 @@ public sealed class DailyRecordsController : ControllerBase
     /// PUT /api/daily-records/1
     /// {
     ///   "foodId": 2,
-    ///   "quantity": 1.5,
+    ///   "quantityInGrams": 150,
     ///   "consumedAt": "2026-07-21T12:00:00Z",
     ///   "mealTypeCode": "Lunch",
     ///   "note": "公司午餐"
@@ -206,9 +207,11 @@ public sealed class DailyRecordsController : ControllerBase
         {
             var errorCode = exception.ParamName switch
             {
-                nameof(UpdateDailyRecordRequest.Quantity) when request.Quantity <= 0 =>
+                nameof(UpdateDailyRecordRequest.QuantityInGrams)
+                    when request.QuantityInGrams <= 0 =>
                     DailyRecordErrorCodes.QuantityMustBeGreaterThanZero,
-                nameof(UpdateDailyRecordRequest.Quantity) => DailyRecordErrorCodes.QuantityOutOfRange,
+                nameof(UpdateDailyRecordRequest.QuantityInGrams) =>
+                    DailyRecordErrorCodes.QuantityOutOfRange,
                 nameof(UpdateDailyRecordRequest.FoodId) => DailyRecordErrorCodes.FoodIdInvalid,
                 nameof(UpdateDailyRecordRequest.ConsumedAt) =>
                     DailyRecordErrorCodes.ConsumedAtCannotBeFuture,
