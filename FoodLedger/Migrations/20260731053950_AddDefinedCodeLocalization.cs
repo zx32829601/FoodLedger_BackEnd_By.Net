@@ -38,6 +38,31 @@ namespace FoodLedger.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.Sql(
+                """
+                INSERT INTO defined_code_translation
+                    (code_type, code, lang_code, display_name, note, created_at, created_by, modified_at, modified_by)
+                SELECT
+                    code_type,
+                    code,
+                    'zh-TW',
+                    display_name,
+                    NULL,
+                    created_at,
+                    created_by,
+                    modified_at,
+                    modified_by
+                FROM defined_code
+                WHERE NOT (
+                    code_type = 'MealType'
+                    AND code IN ('Breakfast', 'Lunch', 'Dinner', 'Snack')
+                );
+                """);
+
+            migrationBuilder.DropColumn(
+                name: "display_name",
+                table: "defined_code");
+
             migrationBuilder.InsertData(
                 table: "defined_code",
                 columns: new[] { "code", "code_type", "created_at", "created_by", "is_active", "modified_at", "modified_by", "sort_order" },
@@ -86,30 +111,30 @@ namespace FoodLedger.Migrations
 
             migrationBuilder.Sql(
                 """
-                INSERT INTO defined_code_translation
-                    (code_type, code, lang_code, display_name, note, created_at, created_by, modified_at, modified_by)
-                SELECT
-                    code_type,
-                    code,
-                    'zh-TW',
-                    display_name,
-                    NULL,
-                    created_at,
-                    created_by,
-                    modified_at,
-                    modified_by
-                FROM defined_code
-                ON CONFLICT (code_type, code, lang_code) DO NOTHING;
-                """);
+                CREATE OR REPLACE FUNCTION prevent_defined_code_delete()
+                RETURNS trigger AS $$
+                BEGIN
+                    RAISE EXCEPTION 'DefinedCode rows cannot be deleted; set is_active to false instead.'
+                        USING ERRCODE = '23503';
+                END;
+                $$ LANGUAGE plpgsql;
 
-            migrationBuilder.DropColumn(
-                name: "display_name",
-                table: "defined_code");
+                CREATE TRIGGER tr_defined_code_prevent_delete
+                BEFORE DELETE ON defined_code
+                FOR EACH ROW
+                EXECUTE FUNCTION prevent_defined_code_delete();
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql(
+                """
+                DROP TRIGGER IF EXISTS tr_defined_code_prevent_delete ON defined_code;
+                DROP FUNCTION IF EXISTS prevent_defined_code_delete();
+                """);
+
             migrationBuilder.AddColumn<string>(
                 name: "display_name",
                 table: "defined_code",
@@ -127,11 +152,11 @@ namespace FoodLedger.Migrations
                         FROM defined_code_translation AS translation
                         WHERE translation.code_type = code.code_type
                           AND translation.code = code.code
+                          AND translation.lang_code IN ('zh-TW', 'en-US')
                         ORDER BY
                             CASE translation.lang_code
                                 WHEN 'zh-TW' THEN 0
                                 WHEN 'en-US' THEN 1
-                                ELSE 2
                             END
                         LIMIT 1
                     ),

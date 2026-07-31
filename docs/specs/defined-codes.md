@@ -14,7 +14,7 @@ DefinedCode 是跨功能共用的固定代碼來源。前端不得自行維護�
 - 欄位：`CodeType`、`Code`、`SortOrder`、`IsActive` 與共用稽核欄位
 - 不保存語系文字
 - `IsActive = true` 才能出現在新資料的選項 API
-- 已被歷史資料使用的代碼不得實體刪除；停用時保留原始 code
+- 所有代碼都不得實體刪除；資料庫 trigger 會拒絕 `DELETE`，停用時只能將 `IsActive` 設為 `false`
 
 ### DefinedCodeTranslation
 
@@ -97,6 +97,7 @@ Response item：
 - 升級時將既有 `defined_code.display_name` 保存為 `zh-TW` 翻譯後，才移除原欄位
 - 已有 seed 翻譯優先，搬移資料遇到相同複合鍵時不得覆寫
 - rollback 時優先取 `zh-TW`、其次 `en-US`、最後原始 code 還原 `display_name`
+- migration 建立資料庫層級刪除 trigger；rollback 會先移除 trigger，再還原舊 schema
 
 ## 測試決策
 
