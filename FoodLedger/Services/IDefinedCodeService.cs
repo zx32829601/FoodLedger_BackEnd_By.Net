@@ -20,6 +20,9 @@ public interface IDefinedCodeService
     /// <summary>
     /// 取得可供使用者選擇的健身目標。
     /// </summary>
+    /// <param name="langCode">顯示名稱與說明使用的 BCP 47 語系代碼。</param>
+    /// <param name="cancellationToken">取消目前查詢的通知權杖。</param>
+    /// <returns>已啟用且依顯示順序排列的健身目標。</returns>
     Task<IReadOnlyList<DefinedCodeResponse>> GetActiveFitnessGoalsAsync(
         string langCode,
         CancellationToken cancellationToken = default);
@@ -27,6 +30,9 @@ public interface IDefinedCodeService
     /// <summary>
     /// 取得可供使用者選擇的活動程度。
     /// </summary>
+    /// <param name="langCode">顯示名稱與說明使用的 BCP 47 語系代碼。</param>
+    /// <param name="cancellationToken">取消目前查詢的通知權杖。</param>
+    /// <returns>已啟用且依顯示順序排列的活動程度。</returns>
     Task<IReadOnlyList<DefinedCodeResponse>> GetActiveActivityLevelsAsync(
         string langCode,
         CancellationToken cancellationToken = default);
