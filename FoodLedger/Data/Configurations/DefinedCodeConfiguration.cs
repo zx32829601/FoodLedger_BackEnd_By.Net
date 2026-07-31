@@ -18,19 +18,26 @@ internal sealed class DefinedCodeConfiguration : IEntityTypeConfiguration<Define
         entity.ConfigureBaseEntity();
 
         entity.HasData(
-            CreateMealType("Breakfast", "早餐", 1),
-            CreateMealType("Lunch", "午餐", 2),
-            CreateMealType("Dinner", "晚餐", 3),
-            CreateMealType("Snack", "點心", 4));
+            CreateCode(DefinedCodeTypes.MealType, "Breakfast", 1),
+            CreateCode(DefinedCodeTypes.MealType, "Lunch", 2),
+            CreateCode(DefinedCodeTypes.MealType, "Dinner", 3),
+            CreateCode(DefinedCodeTypes.MealType, "Snack", 4),
+            CreateCode(DefinedCodeTypes.FitnessGoal, "FAT_LOSS", 1),
+            CreateCode(DefinedCodeTypes.FitnessGoal, "MAINTAIN", 2),
+            CreateCode(DefinedCodeTypes.FitnessGoal, "MUSCLE_GAIN", 3),
+            CreateCode(DefinedCodeTypes.ActivityLevel, "SEDENTARY", 1),
+            CreateCode(DefinedCodeTypes.ActivityLevel, "LIGHT", 2),
+            CreateCode(DefinedCodeTypes.ActivityLevel, "MODERATE", 3),
+            CreateCode(DefinedCodeTypes.ActivityLevel, "HIGH", 4),
+            CreateCode(DefinedCodeTypes.ActivityLevel, "VERY_HIGH", 5));
     }
 
-    private static DefinedCode CreateMealType(string code, string displayName, int sortOrder)
+    private static DefinedCode CreateCode(string codeType, string code, int sortOrder)
     {
         return new DefinedCode
         {
-            CodeType = DefinedCodeTypes.MealType,
+            CodeType = codeType,
             Code = code,
-            DisplayName = displayName,
             SortOrder = sortOrder,
             IsActive = true,
             CreatedAt = SeededAt,

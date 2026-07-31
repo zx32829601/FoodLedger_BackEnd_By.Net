@@ -16,6 +16,16 @@ public sealed class DefinedCodeResponse
     public required string DisplayName { get; init; }
 
     /// <summary>
+    /// 實際採用翻譯的 BCP 47 語系代碼；找不到翻譯時為 <see langword="null" />。
+    /// </summary>
+    public string? LangCode { get; init; }
+
+    /// <summary>
+    /// 提供使用者理解選項用途的在地化說明；找不到翻譯時為 <see langword="null" />。
+    /// </summary>
+    public string? Note { get; init; }
+
+    /// <summary>
     /// 顯示順序。
     /// </summary>
     public int SortOrder { get; init; }

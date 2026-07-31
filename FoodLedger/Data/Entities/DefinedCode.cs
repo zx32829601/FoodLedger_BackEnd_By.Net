@@ -24,13 +24,6 @@ public sealed class DefinedCode : BaseEntity
     public required string Code { get; set; }
 
     /// <summary>
-    /// 預設繁體中文顯示名稱。
-    /// </summary>
-    [MaxLength(100)]
-    [Column("display_name")]
-    public required string DisplayName { get; set; }
-
-    /// <summary>
     /// 同類型代碼的顯示順序。
     /// </summary>
     [Column("sort_order")]
@@ -41,4 +34,9 @@ public sealed class DefinedCode : BaseEntity
     /// </summary>
     [Column("is_active")]
     public bool IsActive { get; set; }
+
+    /// <summary>
+    /// 各語系的顯示名稱與使用者說明。
+    /// </summary>
+    public ICollection<DefinedCodeTranslation> Translations { get; set; } = [];
 }
