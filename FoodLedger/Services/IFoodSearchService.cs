@@ -16,4 +16,14 @@ public interface IFoodSearchService
     Task<FoodSearchResponse> SearchAsync(
         FoodSearchRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>依識別碼取得指定語系的完整食物明細。</summary>
+    /// <param name="foodId">食物識別碼。</param>
+    /// <param name="langCode">BCP 47 顯示語系。</param>
+    /// <param name="cancellationToken">取消目前資料庫查詢的通知權杖。</param>
+    /// <returns>可顯示的食物明細；食物或可用名稱不存在時為 null。</returns>
+    Task<FoodDetailResponse?> GetAsync(
+        long foodId,
+        string langCode,
+        CancellationToken cancellationToken = default);
 }

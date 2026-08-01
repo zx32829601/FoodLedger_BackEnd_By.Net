@@ -19,6 +19,9 @@ internal sealed class NutrientConfiguration : IEntityTypeConfiguration<Nutrient>
         entity.Property(e => e.UnitCode)
             .HasDefaultValue(NutrientUnitCodes.Gram);
 
+        entity.Property(e => e.DisplayOrder)
+            .HasDefaultValue(1000);
+
         entity.ConfigureBaseEntity();
     }
 }

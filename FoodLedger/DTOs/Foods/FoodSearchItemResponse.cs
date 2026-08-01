@@ -25,8 +25,9 @@ public sealed class FoodSearchItemResponse
     /// </summary>
     public required string LangCode { get; init; }
 
-    /// <summary>
-    /// 每 100 克的動態營養素清單。
-    /// </summary>
-    public IReadOnlyList<FoodNutrientResponse> Nutrients { get; init; } = [];
+    /// <summary>主名稱非英文且不同時使用的英文副名稱。</summary>
+    public string? EnglishName { get; init; }
+
+    /// <summary>每 100 克熱量摘要；缺少熱量資料時為 null。</summary>
+    public decimal? CaloriesPer100Grams { get; init; }
 }

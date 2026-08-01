@@ -26,4 +26,6 @@ public sealed class AdminFoodNutrientResponse
     public decimal AmountPer100Grams { get; init; }
     /// <summary>營養素單位代碼。</summary>
     public string UnitCode { get; init; } = string.Empty;
+    /// <summary>跨畫面一致的顯示順序。</summary>
+    public int DisplayOrder { get; init; }
 }

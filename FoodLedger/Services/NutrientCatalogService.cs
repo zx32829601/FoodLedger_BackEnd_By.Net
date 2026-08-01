@@ -20,12 +20,14 @@ public sealed class NutrientCatalogService(ApplicationDbContext dbContext)
             LocalizationRules.FallbackLangCode);
         var rows = await dbContext.Nutrients
             .AsNoTracking()
-            .OrderBy(nutrient => nutrient.NutrientCode)
+            .OrderBy(nutrient => nutrient.DisplayOrder)
+            .ThenBy(nutrient => nutrient.NutrientCode)
             .Select(nutrient => new
             {
                 nutrient.NutrientId,
                 Code = nutrient.NutrientCode,
                 nutrient.UnitCode,
+                nutrient.DisplayOrder,
                 Translation = nutrient.Translations
                     .Where(translation =>
                         translation.LangCode.ToLower() == requestedLangCode
@@ -49,6 +51,7 @@ public sealed class NutrientCatalogService(ApplicationDbContext dbContext)
                 DisplayName = row.Translation?.Name ?? row.Code,
                 LangCode = row.Translation?.LangCode,
                 UnitCode = row.UnitCode,
+                DisplayOrder = row.DisplayOrder,
             })
             .ToArray();
     }

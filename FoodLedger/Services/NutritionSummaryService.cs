@@ -137,6 +137,7 @@ public sealed class NutritionSummaryService(
                     * record.Quantity
                     / NutritionCalculationRules.BasisGrams,
                 UnitCode = foodNutrient.Nutrient.UnitCode,
+                DisplayOrder = foodNutrient.Nutrient.DisplayOrder,
             }).ToListAsync(cancellationToken);
 
         return rows
@@ -150,6 +151,7 @@ public sealed class NutritionSummaryService(
                 LangCode = row.Translation?.LangCode,
                 Amount = row.Amount,
                 UnitCode = row.UnitCode,
+                DisplayOrder = row.DisplayOrder,
             })
             .ToArray();
     }
@@ -165,8 +167,10 @@ public sealed class NutritionSummaryService(
                 contribution.DisplayName,
                 contribution.LangCode,
                 contribution.UnitCode,
+                contribution.DisplayOrder,
             })
-            .OrderBy(group => group.Key.Code)
+            .OrderBy(group => group.Key.DisplayOrder)
+            .ThenBy(group => group.Key.Code)
             .Select(group => new NutritionTotalResponse
             {
                 NutrientId = group.Key.NutrientId,
@@ -175,6 +179,7 @@ public sealed class NutritionSummaryService(
                 LangCode = group.Key.LangCode,
                 Amount = group.Sum(contribution => contribution.Amount),
                 UnitCode = group.Key.UnitCode,
+                DisplayOrder = group.Key.DisplayOrder,
             })
             .ToArray();
     }
@@ -189,5 +194,6 @@ public sealed class NutritionSummaryService(
         public string? LangCode { get; init; }
         public decimal Amount { get; init; }
         public string UnitCode { get; init; } = string.Empty;
+        public int DisplayOrder { get; init; }
     }
 }

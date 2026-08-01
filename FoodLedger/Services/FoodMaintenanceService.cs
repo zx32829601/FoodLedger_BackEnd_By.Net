@@ -151,12 +151,14 @@ public sealed class FoodMaintenanceService(ApplicationDbContext dbContext)
                     .ToArray(),
                 Nutrients = dbContext.FoodNutrients
                     .Where(item => item.FoodId == food.FoodId)
-                    .OrderBy(item => item.Nutrient.NutrientCode)
+                    .OrderBy(item => item.Nutrient.DisplayOrder)
+                    .ThenBy(item => item.Nutrient.NutrientCode)
                     .Select(item => new AdminFoodNutrientResponse
                     {
                         NutrientCode = item.Nutrient.NutrientCode,
                         AmountPer100Grams = item.Amount,
                         UnitCode = item.Nutrient.UnitCode,
+                        DisplayOrder = item.Nutrient.DisplayOrder,
                     })
                     .ToArray(),
             });
