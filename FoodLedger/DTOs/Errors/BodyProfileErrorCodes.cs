@@ -11,6 +11,7 @@ public static class BodyProfileErrorCodes
     public const string AgeOutOfRange = "BodyProfile.AgeOutOfRange";
     public const string InvalidBiologicalSex = "BodyProfile.InvalidBiologicalSex";
     public const string HeightOutOfRange = "BodyProfile.HeightOutOfRange";
+    public const string HeightPrecisionExceeded = "BodyProfile.HeightPrecisionExceeded";
     public const string InvalidFitnessGoal = "BodyProfile.InvalidFitnessGoal";
     public const string InvalidActivityLevel = "BodyProfile.InvalidActivityLevel";
     public const string InvalidTimeZone = "BodyProfile.InvalidTimeZone";

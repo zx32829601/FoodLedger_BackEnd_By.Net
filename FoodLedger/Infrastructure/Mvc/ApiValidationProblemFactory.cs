@@ -85,6 +85,7 @@ public static class ApiValidationProblemFactory
                 BodyProfileErrorCodes.AgeOutOfRange => "年齡必須介於 18 到 120 歲。",
                 BodyProfileErrorCodes.InvalidBiologicalSex => "生理性別代碼不正確。",
                 BodyProfileErrorCodes.HeightOutOfRange => "身高必須介於 100 到 250 公分。",
+                BodyProfileErrorCodes.HeightPrecisionExceeded => "身高最多可輸入兩位小數。",
                 BodyProfileErrorCodes.InvalidFitnessGoal => "健身目標代碼不存在或已停用。",
                 BodyProfileErrorCodes.InvalidActivityLevel => "活動程度代碼不存在或已停用。",
                 BodyProfileErrorCodes.InvalidTimeZone => "時區代碼不存在或無效。",

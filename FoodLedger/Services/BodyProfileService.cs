@@ -1,8 +1,10 @@
 using FoodLedger.Data.Entities;
 using FoodLedger.DTOs.BodyProfiles;
+using FoodLedger.DTOs.DefinedCodes;
 using FoodLedger.DTOs.Errors;
 using FoodLedger.Models;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace FoodLedger.Services;
 
@@ -20,6 +22,7 @@ public sealed class BodyProfileService(
     private const decimal MaximumHeight = 250m;
 
     public async Task<BodyProfileResponse> GetAsync(
+        string langCode,
         CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
@@ -28,7 +31,18 @@ public sealed class BodyProfileService(
             .SingleOrDefaultAsync(item => item.UserId == userId, cancellationToken)
             ?? throw new KeyNotFoundException();
 
-        return Map(profile);
+        var fitnessGoal = await GetStoredCodeAsync(
+            DefinedCodeTypes.FitnessGoal,
+            profile.FitnessGoalCode,
+            langCode,
+            cancellationToken);
+        var activityLevel = await GetStoredCodeAsync(
+            DefinedCodeTypes.ActivityLevel,
+            profile.ActivityLevelCode,
+            langCode,
+            cancellationToken);
+
+        return Map(profile, fitnessGoal, activityLevel);
     }
 
     public async Task<BodyProfileResponse> UpsertAsync(
@@ -87,7 +101,8 @@ public sealed class BodyProfileService(
         {
             throw new BodyProfileConflictException();
         }
-        catch (DbUpdateException) when (isCreating)
+        catch (DbUpdateException exception)
+            when (isCreating && IsConcurrentCreate(exception))
         {
             // 兩個裝置同時首次建立時，使用者主鍵會阻擋第二筆寫入。
             throw new BodyProfileConflictException();
@@ -137,6 +152,13 @@ public sealed class BodyProfileService(
                 BodyProfileErrorCodes.HeightOutOfRange);
         }
 
+        if (decimal.Round(request.HeightInCentimeters, 2) != request.HeightInCentimeters)
+        {
+            throw Validation(
+                nameof(request.HeightInCentimeters),
+                BodyProfileErrorCodes.HeightPrecisionExceeded);
+        }
+
         if (!await IsActiveCodeAsync(
                 DefinedCodeTypes.FitnessGoal,
                 request.FitnessGoalCode,
@@ -166,6 +188,51 @@ public sealed class BodyProfileService(
             item => item.CodeType == codeType && item.Code == code && item.IsActive,
             cancellationToken);
 
+    private async Task<DefinedCodeResponse?> GetStoredCodeAsync(
+        string codeType,
+        string code,
+        string langCode,
+        CancellationToken cancellationToken)
+    {
+        var requestedLangCode = LocalizationRules.NormalizeLangCode(langCode);
+        var fallbackLangCode = LocalizationRules.NormalizeLangCode(
+            LocalizationRules.FallbackLangCode);
+
+        var row = await dbContext.DefinedCodes
+            .AsNoTracking()
+            .Where(item => item.CodeType == codeType && item.Code == code)
+            .Select(item => new
+            {
+                item.Code,
+                item.SortOrder,
+                Translation = item.Translations
+                    .Where(translation =>
+                        translation.LangCode.ToLower() == requestedLangCode
+                        || translation.LangCode.ToLower() == fallbackLangCode)
+                    .OrderBy(translation =>
+                        translation.LangCode.ToLower() == requestedLangCode ? 0 : 1)
+                    .Select(translation => new
+                    {
+                        translation.DisplayName,
+                        translation.LangCode,
+                        translation.Note,
+                    })
+                    .FirstOrDefault(),
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        return row is null
+            ? null
+            : new DefinedCodeResponse
+            {
+                Code = row.Code,
+                SortOrder = row.SortOrder,
+                DisplayName = row.Translation?.DisplayName ?? row.Code,
+                LangCode = row.Translation?.LangCode,
+                Note = row.Translation?.Note,
+            };
+    }
+
     private long GetCurrentUserId() =>
         currentUserService.IsAuthenticated && currentUserService.UserId.HasValue
             ? currentUserService.UserId.Value
@@ -186,14 +253,30 @@ public sealed class BodyProfileService(
         string fieldName,
         string errorCode) => new(fieldName, errorCode);
 
-    private static BodyProfileResponse Map(BodyProfile profile) => new()
-    {
-        BirthDate = profile.BirthDate,
-        BiologicalSexCode = profile.BiologicalSexCode,
-        HeightInCentimeters = profile.HeightInCentimeters,
-        FitnessGoalCode = profile.FitnessGoalCode,
-        ActivityLevelCode = profile.ActivityLevelCode,
-        TimeZone = profile.TimeZone,
-        Version = profile.Version,
-    };
+    private static bool IsConcurrentCreate(DbUpdateException exception) =>
+        exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "PK_body_profile",
+        };
+
+    private static BodyProfileResponse Map(
+        BodyProfile profile,
+        DefinedCodeResponse? fitnessGoal = null,
+        DefinedCodeResponse? activityLevel = null) => new()
+        {
+            BirthDate = profile.BirthDate,
+            BiologicalSexCode = profile.BiologicalSexCode,
+            HeightInCentimeters = profile.HeightInCentimeters,
+            FitnessGoalCode = profile.FitnessGoalCode,
+            FitnessGoalDisplayName = fitnessGoal?.DisplayName,
+            FitnessGoalLangCode = fitnessGoal?.LangCode,
+            FitnessGoalNote = fitnessGoal?.Note,
+            ActivityLevelCode = profile.ActivityLevelCode,
+            ActivityLevelDisplayName = activityLevel?.DisplayName,
+            ActivityLevelLangCode = activityLevel?.LangCode,
+            ActivityLevelNote = activityLevel?.Note,
+            TimeZone = profile.TimeZone,
+            Version = profile.Version,
+        };
 }

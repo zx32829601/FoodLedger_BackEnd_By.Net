@@ -1,4 +1,5 @@
 using FoodLedger.DTOs.BodyProfiles;
+using FoodLedger.DTOs.DefinedCodes;
 using FoodLedger.DTOs.Errors;
 using FoodLedger.Infrastructure.Authentication;
 using FoodLedger.Infrastructure.Mvc;
@@ -20,11 +21,13 @@ public sealed class BodyProfilesController(IBodyProfileService service) : Contro
     [ProducesResponseType(typeof(BodyProfileResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Get(CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Get(
+        [FromQuery] DefinedCodeQueryRequest request,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            return Ok(await service.GetAsync(cancellationToken));
+            return Ok(await service.GetAsync(request.LangCode, cancellationToken));
         }
         catch (KeyNotFoundException)
         {

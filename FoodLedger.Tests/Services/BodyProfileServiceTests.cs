@@ -38,7 +38,8 @@ public sealed class BodyProfileServiceTests
         await using var dbContext = CreateDbContext();
         var service = CreateService(dbContext);
 
-        Assert.ThrowsAsync<KeyNotFoundException>(async () => await service.GetAsync());
+        Assert.ThrowsAsync<KeyNotFoundException>(
+            async () => await service.GetAsync("zh-TW"));
     }
 
     [Test]
@@ -101,6 +102,7 @@ public sealed class BodyProfileServiceTests
 
     [TestCase("2008-08-01")]
     [TestCase("1906-08-01")]
+    [TestCase("1905-08-02")]
     public async Task UpsertAsync_WhenAgeIsOnInclusiveBoundary_AcceptsBirthDate(
         string birthDate)
     {
@@ -132,6 +134,38 @@ public sealed class BodyProfileServiceTests
     }
 
     [Test]
+    public async Task UpsertAsync_WhenHeightHasMoreThanTwoDecimals_RejectsHeight()
+    {
+        await using var dbContext = CreateDbContext();
+        SeedActiveCodes(dbContext);
+        var service = CreateService(dbContext);
+        var request = CreateRequest();
+        request.HeightInCentimeters = 175.555m;
+
+        var exception = Assert.ThrowsAsync<BodyProfileValidationException>(
+            async () => await service.UpsertAsync(request));
+
+        Assert.That(exception?.ErrorCode,
+            Is.EqualTo("BodyProfile.HeightPrecisionExceeded"));
+    }
+
+    [TestCase(100)]
+    [TestCase(250)]
+    public async Task UpsertAsync_WhenHeightIsOnInclusiveBoundary_AcceptsHeight(
+        decimal height)
+    {
+        await using var dbContext = CreateDbContext();
+        SeedActiveCodes(dbContext);
+        var service = CreateService(dbContext);
+        var request = CreateRequest();
+        request.HeightInCentimeters = height;
+
+        var result = await service.UpsertAsync(request);
+
+        Assert.That(result.HeightInCentimeters, Is.EqualTo(height));
+    }
+
+    [Test]
     public async Task UpsertAsync_WhenTimeZoneIsNotIana_RejectsTimeZone()
     {
         await using var dbContext = CreateDbContext();
@@ -146,7 +180,7 @@ public sealed class BodyProfileServiceTests
         Assert.That(exception?.ErrorCode, Is.EqualTo("BodyProfile.InvalidTimeZone"));
     }
 
-    [TestCase("FitnessGoalCode", "UNKNOWN")]
+    [TestCase("FitnessGoalCode", "INACTIVE")]
     [TestCase("ActivityLevelCode", "UNKNOWN")]
     public async Task UpsertAsync_WhenDefinedCodeIsInactiveOrMissing_RejectsCode(
         string field,
@@ -171,11 +205,131 @@ public sealed class BodyProfileServiceTests
         Assert.That(exception?.FieldName, Is.EqualTo(field));
     }
 
-    private static BodyProfileService CreateService(ApplicationDbContext dbContext) =>
+    [Test]
+    public async Task GetAsync_WhenStoredCodeIsInactive_ReturnsLocalizedHistoricalLabel()
+    {
+        await using var dbContext = CreateDbContext();
+        SeedActiveCodes(dbContext);
+        var service = CreateService(dbContext);
+        await service.UpsertAsync(CreateRequest());
+        var goal = await dbContext.DefinedCodes.SingleAsync(item =>
+            item.CodeType == DefinedCodeTypes.FitnessGoal && item.Code == "MAINTAIN");
+        goal.IsActive = false;
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.GetAsync("fr-FR");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.FitnessGoalDisplayName, Is.EqualTo("Maintain weight"));
+            Assert.That(result.FitnessGoalLangCode, Is.EqualTo("en-US"));
+            Assert.That(result.FitnessGoalNote, Is.EqualTo("Keep current weight."));
+        });
+    }
+
+    [Test]
+    public void UpsertAsync_WhenBirthdayHasNotArrivedInConfiguredTimeZone_RejectsAge()
+    {
+        using var dbContext = CreateDbContext();
+        SeedActiveCodes(dbContext);
+        var service = CreateService(
+            dbContext,
+            now: new DateTimeOffset(2026, 3, 8, 4, 30, 0, TimeSpan.Zero));
+        var request = CreateRequest();
+        request.BirthDate = new DateOnly(2008, 3, 8);
+        request.TimeZone = "America/New_York";
+
+        var exception = Assert.ThrowsAsync<BodyProfileValidationException>(
+            async () => await service.UpsertAsync(request));
+
+        Assert.That(exception?.ErrorCode, Is.EqualTo("BodyProfile.AgeOutOfRange"));
+    }
+
+    [Test]
+    public async Task UpsertAsync_WhenBirthdayArrivesInConfiguredTimeZone_AcceptsAge()
+    {
+        await using var dbContext = CreateDbContext();
+        SeedActiveCodes(dbContext);
+        var service = CreateService(
+            dbContext,
+            now: new DateTimeOffset(2026, 3, 8, 5, 30, 0, TimeSpan.Zero));
+        var request = CreateRequest();
+        request.BirthDate = new DateOnly(2008, 3, 8);
+        request.TimeZone = "America/New_York";
+
+        var result = await service.UpsertAsync(request);
+
+        Assert.That(result.BirthDate, Is.EqualTo(request.BirthDate));
+    }
+
+    [Test]
+    public async Task UpsertAsync_WhenBirthdayPassedInConfiguredTimeZone_AcceptsAge()
+    {
+        await using var dbContext = CreateDbContext();
+        SeedActiveCodes(dbContext);
+        var service = CreateService(
+            dbContext,
+            now: new DateTimeOffset(2026, 3, 9, 5, 0, 0, TimeSpan.Zero));
+        var request = CreateRequest();
+        request.BirthDate = new DateOnly(2008, 3, 8);
+        request.TimeZone = "America/New_York";
+
+        var result = await service.UpsertAsync(request);
+
+        Assert.That(result.BirthDate, Is.EqualTo(request.BirthDate));
+    }
+
+    [Test]
+    public void UpsertAsync_WhenBiologicalSexIsUnsupported_RejectsCode()
+    {
+        using var dbContext = CreateDbContext();
+        SeedActiveCodes(dbContext);
+        var service = CreateService(dbContext);
+        var request = CreateRequest();
+        request.BiologicalSexCode = "UNKNOWN";
+
+        var exception = Assert.ThrowsAsync<BodyProfileValidationException>(
+            async () => await service.UpsertAsync(request));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception?.FieldName,
+                Is.EqualTo(nameof(request.BiologicalSexCode)));
+            Assert.That(exception?.ErrorCode,
+                Is.EqualTo("BodyProfile.InvalidBiologicalSex"));
+        });
+    }
+
+    [Test]
+    public async Task GetAsync_WhenTwoUsersHaveProfiles_ReturnsOnlyCurrentUsersProfile()
+    {
+        await using var dbContext = CreateDbContext();
+        SeedActiveCodes(dbContext);
+        var firstService = CreateService(dbContext, userId: 42);
+        var secondService = CreateService(dbContext, userId: 43);
+        await firstService.UpsertAsync(CreateRequest());
+        var secondRequest = CreateRequest();
+        secondRequest.HeightInCentimeters = 188m;
+        await secondService.UpsertAsync(secondRequest);
+
+        var first = await firstService.GetAsync("zh-TW");
+        var second = await secondService.GetAsync("zh-TW");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.HeightInCentimeters, Is.EqualTo(175.5m));
+            Assert.That(second.HeightInCentimeters, Is.EqualTo(188m));
+        });
+    }
+
+    private static BodyProfileService CreateService(
+        ApplicationDbContext dbContext,
+        long userId = CurrentUserId,
+        DateTimeOffset? now = null) =>
         new(
             dbContext,
-            new TestCurrentUserService(),
-            new FixedTimeProvider(FixedUtcNow));
+            new TestCurrentUserService(userId),
+            new FixedTimeProvider(now ?? FixedUtcNow));
 
     private static UpsertBodyProfileRequest CreateRequest(Guid? version = null) => new()
     {
@@ -205,6 +359,17 @@ public sealed class BodyProfileServiceTests
                 Code = "MAINTAIN",
                 SortOrder = 1,
                 IsActive = true,
+                Translations =
+                [
+                    new DefinedCodeTranslation
+                    {
+                        CodeType = DefinedCodeTypes.FitnessGoal,
+                        Code = "MAINTAIN",
+                        LangCode = "en-US",
+                        DisplayName = "Maintain weight",
+                        Note = "Keep current weight.",
+                    },
+                ],
             },
             new DefinedCode
             {
@@ -212,14 +377,21 @@ public sealed class BodyProfileServiceTests
                 Code = "MODERATE",
                 SortOrder = 1,
                 IsActive = true,
+            },
+            new DefinedCode
+            {
+                CodeType = DefinedCodeTypes.FitnessGoal,
+                Code = "INACTIVE",
+                SortOrder = 2,
+                IsActive = false,
             });
         dbContext.SaveChanges();
     }
 
-    private sealed class TestCurrentUserService : ICurrentUserService
+    private sealed class TestCurrentUserService(long userId) : ICurrentUserService
     {
         public bool IsAuthenticated => true;
-        public long? UserId => CurrentUserId;
+        public long? UserId => userId;
         public string? UserName => "body-profile-test";
     }
 

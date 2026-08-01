@@ -7,7 +7,9 @@ namespace FoodLedger.Services;
 /// </summary>
 public interface IBodyProfileService
 {
-    Task<BodyProfileResponse> GetAsync(CancellationToken cancellationToken = default);
+    Task<BodyProfileResponse> GetAsync(
+        string langCode,
+        CancellationToken cancellationToken = default);
 
     Task<BodyProfileResponse> UpsertAsync(
         UpsertBodyProfileRequest request,

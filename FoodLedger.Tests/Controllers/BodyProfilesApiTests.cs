@@ -63,7 +63,7 @@ public sealed class BodyProfilesApiTests
         using var client = CreateAuthenticatedClient(factory);
 
         var putResponse = await client.PutAsJsonAsync(Path, CreateRequest());
-        var getResponse = await client.GetAsync(Path);
+        var getResponse = await client.GetAsync($"{Path}?langCode=fr-FR");
         using var json = JsonDocument.Parse(await getResponse.Content.ReadAsStringAsync());
 
         Assert.Multiple(() =>
@@ -76,6 +76,30 @@ public sealed class BodyProfilesApiTests
                 Is.EqualTo("MALE"));
             Assert.That(json.RootElement.GetProperty("version").GetGuid(),
                 Is.Not.EqualTo(Guid.Empty));
+            Assert.That(json.RootElement.GetProperty("fitnessGoalDisplayName").GetString(),
+                Is.EqualTo("Maintain weight"));
+            Assert.That(json.RootElement.GetProperty("fitnessGoalLangCode").GetString(),
+                Is.EqualTo("en-US"));
+            Assert.That(json.RootElement.GetProperty("fitnessGoalNote").GetString(),
+                Is.EqualTo("Keep current weight."));
+        });
+    }
+
+    [Test]
+    public async Task Get_WhenLangCodeIsInvalid_ReturnsFieldValidationError()
+    {
+        await using var factory = new BodyProfileApiFactory();
+        using var client = CreateAuthenticatedClient(factory);
+
+        var response = await client.GetAsync($"{Path}?langCode=invalid_tag");
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(json.RootElement.GetProperty("errors")
+                .GetProperty("langCode")[0].GetProperty("code").GetString(),
+                Is.EqualTo("DefinedCode.InvalidLangCode"));
         });
     }
 
@@ -131,6 +155,30 @@ public sealed class BodyProfilesApiTests
         });
     }
 
+    [Test]
+    public async Task PutThenGet_WhenTwoUsersAreAuthenticated_IsolatesProfiles()
+    {
+        await using var factory = new BodyProfileApiFactory();
+        await factory.SeedAsync();
+        using var firstClient = CreateAuthenticatedClient(factory, 42);
+        using var secondClient = CreateAuthenticatedClient(factory, 43);
+        var secondRequest = CreateRequest();
+        secondRequest.HeightInCentimeters = 188m;
+
+        await firstClient.PutAsJsonAsync(Path, CreateRequest());
+        await secondClient.PutAsJsonAsync(Path, secondRequest);
+        var first = await firstClient.GetFromJsonAsync<JsonElement>(Path);
+        var second = await secondClient.GetFromJsonAsync<JsonElement>(Path);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.GetProperty("heightInCentimeters").GetDecimal(),
+                Is.EqualTo(175.5m));
+            Assert.That(second.GetProperty("heightInCentimeters").GetDecimal(),
+                Is.EqualTo(188m));
+        });
+    }
+
     private static TestRequest CreateRequest(Guid? version = null) => new()
     {
         BirthDate = "1990-05-20",
@@ -142,12 +190,14 @@ public sealed class BodyProfilesApiTests
         Version = version,
     };
 
-    private static HttpClient CreateAuthenticatedClient(BodyProfileApiFactory factory)
+    private static HttpClient CreateAuthenticatedClient(
+        BodyProfileApiFactory factory,
+        long userId = 42)
     {
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             TestAuthenticationScheme,
-            "authenticated");
+            userId.ToString());
         return client;
     }
 
@@ -177,6 +227,17 @@ public sealed class BodyProfilesApiTests
                     Code = "MAINTAIN",
                     SortOrder = 1,
                     IsActive = true,
+                    Translations =
+                    [
+                        new DefinedCodeTranslation
+                        {
+                            CodeType = DefinedCodeTypes.FitnessGoal,
+                            Code = "MAINTAIN",
+                            LangCode = "en-US",
+                            DisplayName = "Maintain weight",
+                            Note = "Keep current weight.",
+                        },
+                    ],
                 },
                 new DefinedCode
                 {
@@ -224,8 +285,13 @@ public sealed class BodyProfilesApiTests
                 return Task.FromResult(AuthenticateResult.NoResult());
             }
 
+            var authorization = AuthenticationHeaderValue.Parse(
+                Request.Headers.Authorization.ToString());
+            var userId = long.TryParse(authorization.Parameter, out var parsedUserId)
+                ? parsedUserId
+                : 42;
             var identity = new ClaimsIdentity(
-                [new Claim(ClaimTypes.NameIdentifier, "42")],
+                [new Claim(ClaimTypes.NameIdentifier, userId.ToString())],
                 TestAuthenticationScheme);
             var ticket = new AuthenticationTicket(
                 new ClaimsPrincipal(identity),
