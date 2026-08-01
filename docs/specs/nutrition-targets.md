@@ -287,6 +287,13 @@ Nutrition Summary 依查詢日期選擇當日最後生效的 Nutrition Target，
 
 ## Further Notes
 
+### Implementation status (2026-08-01)
+
+- Localized DefinedCode and the Body Profile authenticated vertical slice are implemented.
+- Body Profile persists birth date, biological sex, height, fitness goal, activity level, IANA timezone, and a UUID concurrency version.
+- The Flutter member page provides the missing-profile hint, create-now action, dedicated create/edit form, localized DefinedCode display names and Notes, editable timezone, and conflict refresh behavior.
+- Body Measurement, Nutrition Target Snapshot, calculation, history, and Nutrition Summary target comparison remain future slices.
+
 - Nutrition Target Snapshot is distinct from Nutrition Summary's live nutrient aggregation. The first records versioned recommendations; the second calculates actual intake from Daily Records.
 - DefinedCode Note is explanatory content only and must never become an untyped configuration channel.
 - When policy V2 is introduced, V1 must remain executable for correction of V1 Snapshots.

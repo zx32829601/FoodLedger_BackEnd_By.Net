@@ -19,6 +19,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     }
 
     public DbSet<DailyRecord> DailyRecords => Set<DailyRecord>();
+    public DbSet<BodyProfile> BodyProfiles => Set<BodyProfile>();
     public DbSet<DefinedCode> DefinedCodes => Set<DefinedCode>();
     public DbSet<DefinedCodeTranslation> DefinedCodeTranslations =>
         Set<DefinedCodeTranslation>();
