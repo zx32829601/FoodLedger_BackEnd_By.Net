@@ -100,6 +100,37 @@ public class ApplicationDbContextModelTests
     }
 
     /// <summary>
+    /// 驗證翻譯以代碼類型、代碼及語系組成唯一識別，且禁止連帶刪除已使用的代碼。
+    /// </summary>
+    [Test]
+    public void DefinedCodeTranslation_WhenModelIsBuilt_HasCompositeKeyAndRestrictedRelationship()
+    {
+        // Arrange
+        using var dbContext = CreateDbContext();
+        var entityType = dbContext.Model.FindEntityType(typeof(DefinedCodeTranslation));
+
+        // Act
+        var keyProperties = entityType?.FindPrimaryKey()?.Properties
+            .Select(property => property.Name);
+        var foreignKey = entityType?.GetForeignKeys().Single();
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(keyProperties, Is.EqualTo(new[]
+            {
+                nameof(DefinedCodeTranslation.CodeType),
+                nameof(DefinedCodeTranslation.Code),
+                nameof(DefinedCodeTranslation.LangCode),
+            }));
+            Assert.That(foreignKey?.DeleteBehavior, Is.EqualTo(DeleteBehavior.Restrict));
+            Assert.That(
+                entityType?.FindProperty(nameof(DefinedCodeTranslation.Note))?.GetMaxLength(),
+                Is.EqualTo(500));
+        });
+    }
+
+    /// <summary>
     /// 驗證 DailyRecord 的餐別為必要欄位且備註最大長度為 500。
     /// </summary>
     [Test]

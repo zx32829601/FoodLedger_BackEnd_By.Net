@@ -1,111 +1,117 @@
-# 通用 DefinedCode 代碼架構規格
+# 通用 DefinedCode 多語系規格
 
-## 問題說明
+## 功能目標
 
-FoodLedger 後續會有多種固定代碼需求，例如 DailyRecord 的餐別 `MealType`，以及 Auth / Account 的帳號狀態 `AccountStatus`。如果每個功能都各自 hardcode code 與顯示名稱，前端與後端會逐漸出現重複定義、排序不一致、停用規則不一致與多語系擴充困難。
+DefinedCode 是跨功能共用的固定代碼來源。前端不得自行維護代碼、顯示名稱、說明或排序；後端以穩定的 `CodeType + Code` 保存資料語意，並依要求語系提供可顯示文字。
 
-目前 DailyRecord 第一版需要餐別 select，前端不應自行維護餐別 code/displayName，而應由後端提供統一代碼來源。
+本版支援餐別、健身目標與活動程度，並將 `DisplayName` 與 `Note` 移至多語系翻譯資料。
 
-## 解決方案
+## 資料模型
 
-建立通用 `DefinedCode` 架構，用一張代碼表支援多種代碼類型。第一階段先支援 `MealType`，未來可擴充到 `AccountStatus` 與其他代碼。
+### DefinedCode
 
-`DefinedCode` 使用 `CodeType + Code` 區分代碼：
+- 複合主鍵：`CodeType + Code`
+- 欄位：`CodeType`、`Code`、`SortOrder`、`IsActive` 與共用稽核欄位
+- 不保存語系文字
+- `IsActive = true` 才能出現在新資料的選項 API
+- 所有代碼都不得實體刪除；資料庫 trigger 會拒絕 `DELETE`，停用時只能將 `IsActive` 設為 `false`
 
-- `CodeType = MealType`
-- `Code = Breakfast`
+### DefinedCodeTranslation
 
-第一版提供讀取 API 給前端取得餐別選項：
+- 複合主鍵：`CodeType + Code + LangCode`
+- 複合外鍵指向 `DefinedCode`，刪除行為為 `Restrict`
+- 欄位：
+  - `LangCode`：合法 BCP 47 語系代碼
+  - `DisplayName`：必要，最大 100 字元
+  - `Note`：選填，最大 500 字元
+  - 共用稽核欄位
+- `Note` 只提供使用者理解選項，不得由計算邏輯解析或作為係數來源
+
+## 語系規則
+
+- API query `langCode` 預設為 `zh-TW`
+- `langCode` 必須符合系統接受的 BCP 47 格式
+- 查詢順序：
+  1. 不分大小寫比對要求語系
+  2. 找不到時 fallback 至 `en-US`
+  3. 仍找不到時以原始 `Code` 作為 `displayName`，`langCode` 與 `note` 回 `null`
+- Response 的 `langCode` 是實際採用的翻譯語系，因此發生 fallback 時會回 `en-US`
+
+## 代碼種類與 seed
+
+### MealType
+
+| Code | sortOrder | zh-TW | en-US |
+| --- | ---: | --- | --- |
+| `Breakfast` | 1 | 早餐 | Breakfast |
+| `Lunch` | 2 | 午餐 | Lunch |
+| `Dinner` | 3 | 晚餐 | Dinner |
+| `Snack` | 4 | 點心 | Snack |
+
+### FITNESS_GOAL
+
+| Code | sortOrder | zh-TW | en-US |
+| --- | ---: | --- | --- |
+| `FAT_LOSS` | 1 | 減脂 | Fat loss |
+| `MAINTAIN` | 2 | 維持體重 | Maintain |
+| `MUSCLE_GAIN` | 3 | 增肌 | Muscle gain |
+
+### ACTIVITY_LEVEL
+
+| Code | sortOrder | zh-TW | en-US |
+| --- | ---: | --- | --- |
+| `SEDENTARY` | 1 | 久坐 | Sedentary |
+| `LIGHT` | 2 | 輕度活動 | Lightly active |
+| `MODERATE` | 3 | 中度活動 | Moderately active |
+| `HIGH` | 4 | 高度活動 | Highly active |
+| `VERY_HIGH` | 5 | 極高活動 | Very highly active |
+
+每筆 seed 都必須提供 `zh-TW`、`en-US` 的 `DisplayName` 與非空白 `Note`。
+
+## HTTP API
+
+三個端點皆不需登入，只回 active code，依 `sortOrder`、`code` 排序：
 
 ```http
-GET /api/defined-codes/meal-types
+GET /api/defined-codes/meal-types?langCode=zh-TW
+GET /api/defined-codes/fitness-goals?langCode=zh-TW
+GET /api/defined-codes/activity-levels?langCode=zh-TW
 ```
 
-## 使用者故事
+Response item：
 
-1. 作為前端工程師，我想從後端取得餐別選項，讓前端 select 不需要 hardcode 餐別定義。
-2. 作為使用者，我想在新增飲食紀錄時選擇早餐、午餐、晚餐或點心，讓我的紀錄可以被清楚分類。
-3. 作為後端工程師，我想用同一套代碼架構管理餐別與未來帳號狀態，讓代碼規則一致。
-4. 作為前端工程師，我想取得餐別顯示順序，讓 UI 能依後端規則排序。
-5. 作為系統管理者，我希望未來能停用某些代碼，讓新資料不可再使用，但舊資料仍保留語意。
-6. 作為後端工程師，我希望代碼不被實體刪除，避免歷史資料失去可讀性。
-7. 作為未來多語系使用者，我希望代碼架構能擴充翻譯資料，讓不同語系可顯示不同名稱。
+```json
+{
+  "code": "FAT_LOSS",
+  "displayName": "減脂",
+  "langCode": "zh-TW",
+  "note": "以降低體脂為目標，建議熱量設定低於維持需求。",
+  "sortOrder": 1
+}
+```
 
-## 實作決策
+不合法的 `langCode` 回 `400 Bad Request`，欄位錯誤碼使用 `DefinedCode.InvalidLangCode`。
 
-- Entity 名稱使用 `DefinedCode`。
-- DbSet 名稱使用 `DefinedCodes`。
-- `DefinedCode` 第一版欄位：
-  - `CodeType`
-  - `Code`
-  - `DisplayName`
-  - `SortOrder`
-  - `IsActive`
-- `CodeType + Code` 形成唯一鍵。
-- 第一版 `DisplayName` 放預設中文名稱。
-- 未來若需要多語系，再新增 `DefinedCodeTranslation`。
-- 不在 `DefinedCode` 本表加入 `DisplayNameEn`、`DisplayNameZhTw` 這種欄位。
-- 第一版不做 DefinedCode 管理 API。
-- 第一版只做 seed / migration 與讀取 API。
-- 不做實體刪除，使用 `IsActive` 控制是否可用。
-- `IsActive = true` 的代碼可被新資料使用。
-- `IsActive = false` 的代碼不可被新資料使用，但舊資料仍可保留該 code。
-- 第一版 seed `MealType`：
-  - `Breakfast` / 早餐 / sortOrder 1
-  - `Lunch` / 午餐 / sortOrder 2
-  - `Dinner` / 晚餐 / sortOrder 3
-  - `Snack` / 點心 / sortOrder 4
-- 第一版 API：
-  - `GET /api/defined-codes/meal-types`
-- API response：
-  - `code`
-  - `displayName`
-  - `sortOrder`
-- `GET /api/defined-codes/meal-types`：
-  - 只回 `CodeType = MealType`
-  - 只回 `IsActive = true`
-  - 依 `SortOrder` 由小到大排序
-  - 第一版不支援語系參數
-  - 不要求登入
-- 未來規劃：
-  - DefinedCode 管理 API
-  - Admin 授權
-  - 新增代碼
-  - 修改顯示名稱
-  - 調整排序
-  - 停用代碼
-  - `DefinedCodeTranslation`
-  - `AccountStatus`
+## Migration 規則
+
+- 升級時將既有 `defined_code.display_name` 保存為 `zh-TW` 翻譯後，才移除原欄位
+- 已有 seed 翻譯優先，搬移資料遇到相同複合鍵時不得覆寫
+- rollback 時優先取 `zh-TW`、其次 `en-US`、最後原始 code 還原 `display_name`
+- migration 建立資料庫層級刪除 trigger；rollback 會先移除 trigger，再還原舊 schema
 
 ## 測試決策
 
-- 第一個 TDD loop 從餐別讀取 API 開始。
-- 第一個紅燈測試：
-  - `DefinedCodesController.GetMealTypes_WhenActiveMealTypesExist_ReturnsActiveCodesOrderedBySortOrder`
-- 測試應驗證外部行為：
-  - 只回 active meal types。
-  - 排除 inactive code。
-  - 依 `SortOrder` 排序。
-  - 回傳 `code`、`displayName`、`sortOrder`。
-- 後續測試再補：
-  - `DefinedCode` EF model 唯一鍵。
-  - `DefinedCode` seed data。
-  - 非 MealType code 不會出現在 meal types API。
-  - API 不需登入即可取得餐別選項。
-- 測試使用 NUnit。
-- 每個 TDD loop 只新增一個紅燈測試。
-- 測試方法加繁體中文 XML summary。
+- 驗證指定語系、`en-US` fallback 與實際 `langCode`
+- 驗證 localized `Note`
+- 驗證只回 active code 且排序穩定
+- 驗證 Fitness Goal 與 Activity Level 的完整 seed
+- 驗證翻譯複合鍵及 `Restrict` 外鍵
+- 驗證不合法語系回 400
+- 驗證 migration 不遺失既有顯示名稱
 
 ## 不在本次範圍
 
-- DefinedCode 管理 API。
-- DefinedCode 多語系 API。
-- DefinedCodeTranslation。
-- 後台維護畫面。
-- AccountStatus 實作。
-- DB composite FK 強約束。
-- 實體刪除 DefinedCode。
-
-## 補充說明
-
-`DefinedCode` 是跨功能基礎架構，不只是 DailyRecord 的餐別附屬功能。DailyRecord 使用 `MealType`，Auth 未來可使用 `AccountStatus`。
+- DefinedCode 後台管理 API 與管理畫面
+- 自訂計算係數
+- 由 `Note` 推導熱量或營養素公式
+- 實體刪除已使用的代碼
