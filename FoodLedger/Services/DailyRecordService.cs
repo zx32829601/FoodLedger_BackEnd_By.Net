@@ -43,14 +43,14 @@ public sealed class DailyRecordService : IDailyRecordService
             throw new UnauthorizedAccessException();
         }
 
-        if (request.Quantity <= 0)
+        if (request.QuantityInGrams <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(request.Quantity));
+            throw new ArgumentOutOfRangeException(nameof(request.QuantityInGrams));
         }
 
-        if (request.Quantity > MaximumQuantity)
+        if (request.QuantityInGrams > MaximumQuantity)
         {
-            throw new ArgumentOutOfRangeException(nameof(request.Quantity));
+            throw new ArgumentOutOfRangeException(nameof(request.QuantityInGrams));
         }
 
         if (request.FoodId <= 0)
@@ -76,7 +76,7 @@ public sealed class DailyRecordService : IDailyRecordService
         {
             UserId = currentUserId,
             FoodId = request.FoodId,
-            Quantity = request.Quantity,
+            Quantity = request.QuantityInGrams,
             ConsumedAt = request.ConsumedAt.ToUniversalTime(),
             MealTypeCode = request.MealTypeCode,
             Note = NormalizeNote(request.Note),
@@ -185,7 +185,7 @@ public sealed class DailyRecordService : IDailyRecordService
                         UnitCode = localizedNutrient.FoodNutrient.Nutrient.UnitCode,
                     })
                     .ToArray(),
-                Quantity = localizedRecord.Record.Quantity,
+                QuantityInGrams = localizedRecord.Record.Quantity,
                 ConsumedAt = localizedRecord.Record.ConsumedAt,
                 MealTypeCode = localizedRecord.Record.MealTypeCode,
                 Note = localizedRecord.Record.Note,
@@ -204,9 +204,9 @@ public sealed class DailyRecordService : IDailyRecordService
             throw new UnauthorizedAccessException();
         }
 
-        if (request.Quantity <= 0 || request.Quantity > MaximumQuantity)
+        if (request.QuantityInGrams <= 0 || request.QuantityInGrams > MaximumQuantity)
         {
-            throw new ArgumentOutOfRangeException(nameof(request.Quantity));
+            throw new ArgumentOutOfRangeException(nameof(request.QuantityInGrams));
         }
 
         if (request.FoodId <= 0)
@@ -238,7 +238,7 @@ public sealed class DailyRecordService : IDailyRecordService
         await ValidateMealTypeAsync(request.MealTypeCode, cancellationToken);
 
         dailyRecord.FoodId = request.FoodId;
-        dailyRecord.Quantity = request.Quantity;
+        dailyRecord.Quantity = request.QuantityInGrams;
         dailyRecord.ConsumedAt = request.ConsumedAt.ToUniversalTime();
         dailyRecord.MealTypeCode = request.MealTypeCode;
         dailyRecord.Note = NormalizeNote(request.Note);

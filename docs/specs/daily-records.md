@@ -16,7 +16,7 @@ FoodLedger 的核心功能是讓使用者記錄每日實際攝取的食物。目
 DailyRecord 第一版核心欄位：
 
 - `foodId`
-- `quantity`
+- `quantityInGrams`
 - `consumedAt`
 - `mealTypeCode`
 - `note`
@@ -42,7 +42,7 @@ DailyRecord 第一版核心欄位：
 
 - DailyRecord 第一版核心欄位：
   - `foodId`
-  - `quantity`
+  - `quantityInGrams`
   - `consumedAt`
   - `mealTypeCode`
   - `note`
@@ -65,7 +65,7 @@ DailyRecord 第一版核心欄位：
 - `GET /api/daily-records` response 包含：
   - `recordId`
   - `foodId`
-  - `quantity`
+  - `quantityInGrams`
   - `consumedAt`
   - `mealTypeCode`
   - `note`
@@ -78,7 +78,7 @@ DailyRecord 第一版核心欄位：
   - request 不收 `UserId`
   - 使用目前登入使用者作為擁有者
   - `foodId` 必須有效且食物存在
-  - `quantity` 必須大於 0 且不超過 10000
+  - `quantityInGrams` 必須大於 0 且不超過 10000
   - `consumedAt` 不可晚於目前 UTC
   - `consumedAt` 儲存時正規化為 UTC
   - `mealTypeCode` 必須存在且 active
@@ -90,7 +90,7 @@ DailyRecord 第一版核心欄位：
   - `PUT /api/daily-records/{recordId}`
 - 修改可更新：
   - `foodId`
-  - `quantity`
+  - `quantityInGrams`
   - `consumedAt`
   - `mealTypeCode`
   - `note`

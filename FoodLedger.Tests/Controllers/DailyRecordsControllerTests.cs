@@ -25,7 +25,7 @@ public class DailyRecordsControllerTests
             {
                 RecordId = 1,
                 FoodId = 2,
-                Quantity = 1.5m,
+                QuantityInGrams = 1.5m,
                 ConsumedAt = new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero),
             },
         };
@@ -97,7 +97,7 @@ public class DailyRecordsControllerTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = DateTimeOffset.UtcNow,
         };
         using var cancellationTokenSource = new CancellationTokenSource();
@@ -134,7 +134,7 @@ public class DailyRecordsControllerTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = DateTimeOffset.UtcNow,
         };
 
@@ -174,7 +174,7 @@ public class DailyRecordsControllerTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 999,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = DateTimeOffset.UtcNow,
         };
 
@@ -205,7 +205,7 @@ public class DailyRecordsControllerTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = DateTimeOffset.UtcNow,
         };
 
@@ -252,7 +252,7 @@ public class DailyRecordsControllerTests
         var request = new UpdateDailyRecordRequest
         {
             FoodId = 2,
-            Quantity = 1.5m,
+            QuantityInGrams = 1.5m,
             ConsumedAt = DateTimeOffset.UtcNow,
             MealTypeCode = "Lunch",
             Note = "午餐",

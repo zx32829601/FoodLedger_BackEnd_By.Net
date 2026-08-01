@@ -27,7 +27,7 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = FixedUtcNow,
         };
 
@@ -54,7 +54,7 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = consumedAt,
             MealTypeCode = "Lunch",
         };
@@ -69,7 +69,7 @@ public partial class DailyRecordServiceTests
         {
             Assert.That(dailyRecord.UserId, Is.EqualTo(CurrentUserId));
             Assert.That(dailyRecord.FoodId, Is.EqualTo(request.FoodId));
-            Assert.That(dailyRecord.Quantity, Is.EqualTo(request.Quantity));
+            Assert.That(dailyRecord.Quantity, Is.EqualTo(request.QuantityInGrams));
             Assert.That(dailyRecord.ConsumedAt, Is.EqualTo(request.ConsumedAt));
         });
     }
@@ -87,7 +87,7 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 0,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = FixedUtcNow,
         };
 
@@ -113,14 +113,16 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = quantity,
+            QuantityInGrams = quantity,
             ConsumedAt = FixedUtcNow,
         };
 
         // Act & Assert
         var exception = Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             async () => await service.CreateDailyRecordAsync(request));
-        Assert.That(exception?.ParamName, Is.EqualTo(nameof(CreateDailyRecordRequest.Quantity)));
+        Assert.That(
+            exception?.ParamName,
+            Is.EqualTo(nameof(CreateDailyRecordRequest.QuantityInGrams)));
         Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
     }
 
@@ -139,14 +141,16 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 10000.001m,
+            QuantityInGrams = 10000.001m,
             ConsumedAt = FixedUtcNow,
         };
 
         // Act & Assert
         var exception = Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             async () => await service.CreateDailyRecordAsync(request));
-        Assert.That(exception?.ParamName, Is.EqualTo(nameof(CreateDailyRecordRequest.Quantity)));
+        Assert.That(
+            exception?.ParamName,
+            Is.EqualTo(nameof(CreateDailyRecordRequest.QuantityInGrams)));
         Assert.That(await dbContext.DailyRecords.CountAsync(), Is.EqualTo(0));
     }
 
@@ -166,7 +170,7 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 10000m,
+            QuantityInGrams = 10000m,
             ConsumedAt = FixedUtcNow,
             MealTypeCode = "Snack",
         };
@@ -180,7 +184,7 @@ public partial class DailyRecordServiceTests
         Assert.Multiple(() =>
         {
             Assert.That(dailyRecord.UserId, Is.EqualTo(CurrentUserId));
-            Assert.That(dailyRecord.Quantity, Is.EqualTo(request.Quantity));
+            Assert.That(dailyRecord.Quantity, Is.EqualTo(request.QuantityInGrams));
         });
     }
 
@@ -197,7 +201,7 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 999,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = FixedUtcNow,
             MealTypeCode = "Snack",
         };
@@ -223,7 +227,7 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = FixedUtcNow.AddMinutes(1),
         };
 
@@ -250,7 +254,7 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = FixedUtcNow,
             MealTypeCode = "Snack",
         };
@@ -281,7 +285,7 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = consumedAt,
             MealTypeCode = "Dinner",
         };
@@ -314,7 +318,7 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = new DateTimeOffset(2026, 7, 21, 20, 1, 0, TimeSpan.FromHours(8)),
         };
 
@@ -378,7 +382,7 @@ public partial class DailyRecordServiceTests
             Assert.That(dailyRecord.FoodId, Is.EqualTo(1));
             Assert.That(dailyRecord.Food.DisplayName, Is.EqualTo("測試食物"));
             Assert.That(dailyRecord.Food.LangCode, Is.EqualTo("zh-TW"));
-            Assert.That(dailyRecord.Quantity, Is.EqualTo(1.5m));
+            Assert.That(dailyRecord.QuantityInGrams, Is.EqualTo(1.5m));
             Assert.That(dailyRecord.ConsumedAt, Is.EqualTo(new DateTimeOffset(2026, 7, 23, 12, 0, 0, TimeSpan.Zero)));
         });
     }
@@ -675,7 +679,7 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = FixedUtcNow,
             MealTypeCode = "Lunch",
             Note = "  公司午餐  ",
@@ -712,7 +716,7 @@ public partial class DailyRecordServiceTests
         var request = new CreateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 1,
+            QuantityInGrams = 1,
             ConsumedAt = FixedUtcNow,
             MealTypeCode = "Lunch",
         };
@@ -758,7 +762,7 @@ public partial class DailyRecordServiceTests
         var request = new UpdateDailyRecordRequest
         {
             FoodId = 2,
-            Quantity = 2.5m,
+            QuantityInGrams = 2.5m,
             ConsumedAt = consumedAt,
             MealTypeCode = "Dinner",
             Note = "   ",
@@ -805,7 +809,7 @@ public partial class DailyRecordServiceTests
         var request = new UpdateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 2,
+            QuantityInGrams = 2,
             ConsumedAt = FixedUtcNow,
             MealTypeCode = "Lunch",
         };
@@ -844,7 +848,7 @@ public partial class DailyRecordServiceTests
         var request = new UpdateDailyRecordRequest
         {
             FoodId = 1,
-            Quantity = 2,
+            QuantityInGrams = 2,
             ConsumedAt = FixedUtcNow,
             MealTypeCode = "Lunch",
         };

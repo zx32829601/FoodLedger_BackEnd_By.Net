@@ -17,9 +17,9 @@ public sealed class UpdateDailyRecordRequest : IValidatableObject
     public long FoodId { get; init; }
 
     /// <summary>
-    /// 食用數量，必須介於 0.001 到 10000。
+    /// 食用份量，單位為克，必須介於 0.001 到 10000。
     /// </summary>
-    public decimal Quantity { get; init; }
+    public decimal QuantityInGrams { get; init; }
 
     /// <summary>
     /// 實際食用時間，不可晚於伺服器目前 UTC 時間。
@@ -44,17 +44,17 @@ public sealed class UpdateDailyRecordRequest : IValidatableObject
             yield return new ValidationResult(DailyRecordErrorCodes.FoodIdInvalid, [nameof(FoodId)]);
         }
 
-        if (Quantity <= 0)
+        if (QuantityInGrams <= 0)
         {
             yield return new ValidationResult(
                 DailyRecordErrorCodes.QuantityMustBeGreaterThanZero,
-                [nameof(Quantity)]);
+                [nameof(QuantityInGrams)]);
         }
-        else if (Quantity is < MinimumQuantity or > MaximumQuantity)
+        else if (QuantityInGrams is < MinimumQuantity or > MaximumQuantity)
         {
             yield return new ValidationResult(
                 DailyRecordErrorCodes.QuantityOutOfRange,
-                [nameof(Quantity)]);
+                [nameof(QuantityInGrams)]);
         }
 
         if (string.IsNullOrWhiteSpace(MealTypeCode))

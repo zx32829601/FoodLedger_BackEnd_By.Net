@@ -131,7 +131,7 @@ API 錯誤格式採用 code-first 設計，`code` 是前後端真正契約，`me
   "message": "請確認輸入資料是否正確。",
   "traceId": "...",
   "errors": {
-    "quantity": [
+    "quantityInGrams": [
       {
         "code": "DailyRecord.QuantityMustBeGreaterThanZero",
         "message": "數量必須大於 0。",
