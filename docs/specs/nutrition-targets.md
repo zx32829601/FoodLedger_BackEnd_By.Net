@@ -77,7 +77,7 @@ Nutrition Summary 依查詢日期選擇當日最後生效的 Nutrition Target，
 
 - Body Profile stores the current personal inputs used by future calculations: birth date, biological sex code, height, fitness goal code, activity level code, and IANA timezone ID.
 - There is at most one Body Profile per user.
-- `GET /api/me/body-profile` returns `404 BodyProfile.NotFound` when no profile exists.
+- `GET /api/me/body-profile` accepts `langCode`, returns localized display names, actual translation language codes, and Notes for the stored fitness goal and activity level, and returns `404 BodyProfile.NotFound` when no profile exists.
 - `PUT /api/me/body-profile` creates or updates the current user's profile.
 - Profile updates affect only future Snapshots and never rewrite historical Snapshots.
 - Body Measurement stores weight, optional body fat percentage, optional muscle mass, server-generated measurement time, and concurrency version.
@@ -97,7 +97,7 @@ Nutrition Summary 依查詢日期選擇當日最後生效的 Nutrition Target，
 - V1 supports adult users from 18 through 120 years old, inclusive.
 - Age is calculated from the user's local date in the configured IANA timezone.
 - V1 biological sex codes are `MALE` and `FEMALE`.
-- Height is required and must be from 100 through 250 centimeters.
+- Height is required, must be from 100 through 250 centimeters, and accepts at most two decimal places without silent rounding.
 - Weight is required and must be from 20 through 400 kilograms.
 - Body fat percentage is optional and must be from 2 through 70 percent when supplied.
 - Muscle mass is optional, must be greater than zero when supplied, and must not exceed weight.
@@ -117,6 +117,7 @@ Nutrition Summary 依查詢日期選擇當日最後生效的 Nutrition Target，
 - Calculation logic never parses Note or display text.
 - DefinedCodes that have been used cannot be physically deleted; they can only be deactivated.
 - Inactive codes remain readable for Profile and Snapshot history, but cannot be used for new current selections or recalculation.
+- Body Profile reads stored codes without active filtering so historical localized labels and Notes remain available; option-list APIs continue to return active codes only.
 
 ### Calculation policy V1
 
@@ -180,7 +181,7 @@ Nutrition Summary 依查詢日期選擇當日最後生效的 Nutrition Target，
 ### API surface
 
 - Body Profile:
-  - `GET /api/me/body-profile`
+  - `GET /api/me/body-profile?langCode={BCP47}`
   - `PUT /api/me/body-profile`
 - Body Measurements:
   - `GET /api/me/body-measurements`
@@ -219,7 +220,10 @@ Nutrition Summary 依查詢日期選擇當日最後生效的 Nutrition Target，
 
 - A missing Profile produces an explanatory empty state with a create-now button.
 - The create-now button navigates to a dedicated Body Profile setup page.
-- Device IANA timezone is prefilled when available and remains editable.
+- Device IANA timezone is read from the platform timezone API, validated against the complete IANA database, prefilled when available, and remains editable.
+- Birth-date picker boundaries use the same configured IANA local date as backend age validation and clamp an existing out-of-range value before opening.
+- Logout and account changes cancel in-flight Profile requests, prevent stale completions from updating the next session, and clear the previous user's Profile and shared Profile timezone before loading the next session.
+- An inactive stored goal or activity level displays the server-provided localized historical label and Note, marks the choice unavailable, and requires an active replacement before saving.
 - After Profile creation, the target page prompts for the first Body Measurement when none exists.
 - New Measurement and Profile edit flows offer a preselected save-and-calculate choice when calculation prerequisites exist.
 - A failed optional calculation keeps valid saved input and presents the calculation failure separately.
@@ -286,6 +290,14 @@ Nutrition Summary 依查詢日期選擇當日最後生效的 Nutrition Target，
 - Repeated legal-consent capture for the estimate disclaimer.
 
 ## Further Notes
+
+### Implementation status (2026-08-01)
+
+- Localized DefinedCode and the Body Profile authenticated vertical slice are implemented.
+- Body Profile persists birth date, biological sex, height, fitness goal, activity level, IANA timezone, and a UUID concurrency version.
+- The Flutter member page provides the missing-profile hint, create-now action, dedicated create/edit form, localized DefinedCode display names and Notes, editable timezone, and conflict refresh behavior.
+- Body Profile validation covers inclusive age and height boundaries, configured-timezone birthday transitions, two-decimal height precision, user ownership, stale versions, inactive historical labels, and PostgreSQL schema invariants.
+- Body Measurement, Nutrition Target Snapshot, calculation, history, and Nutrition Summary target comparison remain future slices.
 
 - Nutrition Target Snapshot is distinct from Nutrition Summary's live nutrient aggregation. The first records versioned recommendations; the second calculates actual intake from Daily Records.
 - DefinedCode Note is explanatory content only and must never become an untyped configuration channel.

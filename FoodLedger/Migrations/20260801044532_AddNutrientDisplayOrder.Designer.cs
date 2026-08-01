@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FoodLedger.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260801044532_AddNutrientDisplayOrder")]
+    partial class AddNutrientDisplayOrder
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -119,83 +122,6 @@ namespace FoodLedger.Migrations
                         .HasDatabaseName("ix_application_user_normalized_user_name");
 
                     b.ToTable("application_user", (string)null);
-                });
-
-            modelBuilder.Entity("FoodLedger.Data.Entities.BodyProfile", b =>
-                {
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("user_id");
-
-                    b.Property<string>("ActivityLevelCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("activity_level_code");
-
-                    b.Property<string>("BiologicalSexCode")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("biological_sex_code");
-
-                    b.Property<DateOnly>("BirthDate")
-                        .HasColumnType("date")
-                        .HasColumnName("birth_date");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasDefaultValue("System")
-                        .HasColumnName("created_by");
-
-                    b.Property<string>("FitnessGoalCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("fitness_goal_code");
-
-                    b.Property<decimal>("HeightInCentimeters")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("numeric(5,2)")
-                        .HasColumnName("height_in_centimeters");
-
-                    b.Property<DateTimeOffset>("ModifiedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("modified_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("modified_by");
-
-                    b.Property<string>("TimeZone")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("time_zone");
-
-                    b.Property<Guid>("Version")
-                        .IsConcurrencyToken()
-                        .HasColumnType("uuid")
-                        .HasColumnName("version");
-
-                    b.HasKey("UserId");
-
-                    b.ToTable("body_profile", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_body_profile_height", "height_in_centimeters >= 100 AND height_in_centimeters <= 250");
-                        });
                 });
 
             modelBuilder.Entity("FoodLedger.Data.Entities.DailyRecord", b =>
@@ -1371,17 +1297,6 @@ namespace FoodLedger.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("application_user_token", (string)null);
-                });
-
-            modelBuilder.Entity("FoodLedger.Data.Entities.BodyProfile", b =>
-                {
-                    b.HasOne("FoodLedger.Data.Entities.ApplicationUser", "User")
-                        .WithOne()
-                        .HasForeignKey("FoodLedger.Data.Entities.BodyProfile", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("FoodLedger.Data.Entities.DailyRecord", b =>

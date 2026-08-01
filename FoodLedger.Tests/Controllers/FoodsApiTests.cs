@@ -127,10 +127,10 @@ public class FoodsApiTests
     }
 
     /// <summary>
-    /// 驗證食物搜尋結果包含每 100 克營養量、營養素單位與營養素名稱 fallback。
+    /// 驗證食物搜尋只回傳輕量的每 100 克熱量摘要，不夾帶完整營養素。
     /// </summary>
     [Test]
-    public async Task SearchAsync_WhenFoodHasNutrients_ReturnsDynamicNutrientsWithUnitsAndTranslationFallback()
+    public async Task SearchAsync_WhenFoodHasNutrients_ReturnsOnlyCalorieSummary()
     {
         // Arrange
         await using var factory = new FoodsApiFactory();
@@ -182,19 +182,69 @@ public class FoodsApiTests
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
 
         // Assert
-        var nutrients = json.RootElement.GetProperty("items")[0].GetProperty("nutrients");
+        var item = json.RootElement.GetProperty("items")[0];
+        var calories = item.GetProperty("caloriesPer100Grams");
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-            Assert.That(nutrients.GetArrayLength(), Is.EqualTo(2));
-            Assert.That(nutrients[0].GetProperty("code").GetString(), Is.EqualTo("Calories"));
-            Assert.That(nutrients[0].GetProperty("displayName").GetString(), Is.EqualTo("Calories"));
-            Assert.That(nutrients[0].GetProperty("amountPer100Grams").GetDecimal(), Is.EqualTo(165m));
-            Assert.That(nutrients[0].GetProperty("unitCode").GetString(), Is.EqualTo("kcal"));
-            Assert.That(nutrients[1].GetProperty("code").GetString(), Is.EqualTo("Protein"));
-            Assert.That(nutrients[1].GetProperty("displayName").GetString(), Is.EqualTo("蛋白質"));
-            Assert.That(nutrients[1].GetProperty("amountPer100Grams").GetDecimal(), Is.EqualTo(31.25m));
-            Assert.That(nutrients[1].GetProperty("unitCode").GetString(), Is.EqualTo("g"));
+            Assert.That(calories.GetDecimal(), Is.EqualTo(165m));
+            Assert.That(item.TryGetProperty("nutrients", out _), Is.False);
+        });
+    }
+
+    /// <summary>
+    /// 驗證食物明細包含雙語名稱、說明、分類，以及依顯示順序排列的完整營養資料。
+    /// </summary>
+    [Test]
+    public async Task GetAsync_WhenFoodExists_ReturnsLocalizedDetailOrderedByDisplayOrder()
+    {
+        await using var factory = new FoodsApiFactory();
+        await factory.SeedAsync(dbContext =>
+        {
+            dbContext.SimpleFoods.Add(new SimpleFood
+            {
+                FoodId = 1,
+                FoodCode = "CHICKEN",
+                Translations =
+                [
+                    new SimpleFoodTranslation { TranslationId = 1, LangCode = "zh-TW", FoodName = "雞胸肉", Description = "低脂蛋白質來源" },
+                    new SimpleFoodTranslation { TranslationId = 2, LangCode = "en-US", FoodName = "Chicken Breast" },
+                ],
+            });
+            dbContext.FoodCategories.Add(new FoodCategory
+            {
+                CategoryId = 1,
+                CategoryCode = "MEAT",
+                Translations =
+                [
+                    new FoodCategoryTranslation { TranslationId = 1, LangCode = "zh-TW", CategoryName = "肉類" },
+                ],
+            });
+            dbContext.SimpleFoodCategories.Add(new SimpleFoodCategory { FoodId = 1, CategoryId = 1 });
+            dbContext.Nutrients.AddRange(
+                new Nutrient { NutrientId = 1, NutrientCode = "Sodium", UnitCode = "mg", DisplayOrder = 50 },
+                new Nutrient { NutrientId = 2, NutrientCode = "Protein", UnitCode = "g", DisplayOrder = 20 });
+            dbContext.FoodNutrients.AddRange(
+                new FoodNutrient { FoodId = 1, NutrientId = 1, Amount = 74m },
+                new FoodNutrient { FoodId = 1, NutrientId = 2, Amount = 31m });
+        });
+        using var client = CreateAuthenticatedClient(factory);
+
+        var response = await client.GetAsync("/api/foods/1?langCode=zh-TW");
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = json.RootElement;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(root.GetProperty("displayName").GetString(), Is.EqualTo("雞胸肉"));
+            Assert.That(root.GetProperty("englishName").GetString(), Is.EqualTo("Chicken Breast"));
+            Assert.That(root.GetProperty("description").GetString(), Is.EqualTo("低脂蛋白質來源"));
+            Assert.That(root.GetProperty("categories")[0].GetProperty("displayName").GetString(), Is.EqualTo("肉類"));
+            Assert.That(root.GetProperty("nutrients")[0].GetProperty("code").GetString(), Is.EqualTo("Protein"));
+            Assert.That(root.GetProperty("nutrients")[0].GetProperty("displayOrder").GetInt32(), Is.EqualTo(20));
+            Assert.That(root.GetProperty("nutrients")[0].GetProperty("displayName").GetString(), Is.EqualTo("Protein"));
+            Assert.That(root.GetProperty("nutrients")[0].GetProperty("langCode").ValueKind, Is.EqualTo(JsonValueKind.Null));
         });
     }
 

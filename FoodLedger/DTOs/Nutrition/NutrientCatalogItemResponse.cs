@@ -19,4 +19,7 @@ public sealed class NutrientCatalogItemResponse
 
     /// <summary>營養素計量單位代碼。</summary>
     public string UnitCode { get; init; } = string.Empty;
+
+    /// <summary>跨 client 一致的全域顯示順位。</summary>
+    public int DisplayOrder { get; init; }
 }

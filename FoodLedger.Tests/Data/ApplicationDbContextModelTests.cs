@@ -100,6 +100,33 @@ public class ApplicationDbContextModelTests
     }
 
     /// <summary>
+    /// 驗證每位使用者最多只有一筆身體資料，且版本可偵測並行更新。
+    /// </summary>
+    [Test]
+    public void BodyProfile_WhenModelIsBuilt_UsesUserPrimaryKeyAndConcurrencyVersion()
+    {
+        // Arrange
+        using var dbContext = CreateDbContext();
+        var entityType = dbContext.Model.FindEntityType(typeof(BodyProfile));
+
+        // Act
+        var primaryKey = entityType?.FindPrimaryKey();
+        var version = entityType?.FindProperty(nameof(BodyProfile.Version));
+        var foreignKey = entityType?.GetForeignKeys().Single();
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(primaryKey?.Properties.Single().Name,
+                Is.EqualTo(nameof(BodyProfile.UserId)));
+            Assert.That(version?.IsConcurrencyToken, Is.True);
+            Assert.That(foreignKey?.PrincipalEntityType.ClrType,
+                Is.EqualTo(typeof(ApplicationUser)));
+            Assert.That(foreignKey?.DeleteBehavior, Is.EqualTo(DeleteBehavior.Cascade));
+        });
+    }
+
+    /// <summary>
     /// 驗證翻譯以代碼類型、代碼及語系組成唯一識別，且禁止連帶刪除已使用的代碼。
     /// </summary>
     [Test]

@@ -63,6 +63,7 @@ public static class ApiValidationProblemFactory
     {
         var code = errorMessage.StartsWith("Auth.", StringComparison.Ordinal)
             || errorMessage.StartsWith("DailyRecord.", StringComparison.Ordinal)
+            || errorMessage.StartsWith("BodyProfile.", StringComparison.Ordinal)
             || errorMessage.StartsWith("DefinedCode.", StringComparison.Ordinal)
             || errorMessage.StartsWith("FoodSearch.", StringComparison.Ordinal)
             || errorMessage.StartsWith("FoodMaintenance.", StringComparison.Ordinal)
@@ -80,6 +81,14 @@ public static class ApiValidationProblemFactory
                 NutritionSummaryErrorCodes.InvalidTimeZone => "時區代碼不存在或無效。",
                 NutritionSummaryErrorCodes.InvalidLangCode => "語系代碼格式不正確。",
                 DefinedCodeErrorCodes.InvalidLangCode => "語系代碼格式不正確。",
+                BodyProfileErrorCodes.BirthDateRequired => "請提供出生日期。",
+                BodyProfileErrorCodes.AgeOutOfRange => "年齡必須介於 18 到 120 歲。",
+                BodyProfileErrorCodes.InvalidBiologicalSex => "生理性別代碼不正確。",
+                BodyProfileErrorCodes.HeightOutOfRange => "身高必須介於 100 到 250 公分。",
+                BodyProfileErrorCodes.HeightPrecisionExceeded => "身高最多可輸入兩位小數。",
+                BodyProfileErrorCodes.InvalidFitnessGoal => "健身目標代碼不存在或已停用。",
+                BodyProfileErrorCodes.InvalidActivityLevel => "活動程度代碼不存在或已停用。",
+                BodyProfileErrorCodes.InvalidTimeZone => "時區代碼不存在或無效。",
                 ApiValidationErrorCodes.UserAccountInvalid =>
                     "使用者帳號須為 4 到 30 個英文字母、數字、底線或連字號。",
                 ApiValidationErrorCodes.DisplayNameInvalid =>
@@ -113,6 +122,10 @@ public static class ApiValidationProblemFactory
                         ["min"] = 0.001m,
                         ["max"] = 10000m,
                     },
+                BodyProfileErrorCodes.AgeOutOfRange =>
+                    new Dictionary<string, object?> { ["min"] = 18, ["max"] = 120 },
+                BodyProfileErrorCodes.HeightOutOfRange =>
+                    new Dictionary<string, object?> { ["min"] = 100, ["max"] = 250 },
                 FoodSearchErrorCodes.PageOutOfRange =>
                     new Dictionary<string, object?>
                     {

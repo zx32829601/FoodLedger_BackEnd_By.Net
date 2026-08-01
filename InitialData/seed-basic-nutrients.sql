@@ -5,29 +5,31 @@ BEGIN;
 INSERT INTO nutrient (
     nutrient_code,
     unit_code,
+    display_order,
     created_at,
     created_by,
     modified_at,
     modified_by
 )
 VALUES
-    ('Calories',       'kcal', CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('Protein',        'g',    CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('Carbohydrates',  'g',    CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('Fat',            'g',    CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('SaturatedFat',   'g',    CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('Sugar',          'g',    CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('DietaryFiber',   'g',    CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('Sodium',         'mg',   CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('Potassium',      'mg',   CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('Calcium',        'mg',   CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('Iron',           'mg',   CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('Cholesterol',    'mg',   CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('VitaminA',       'ug',   CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
-    ('VitaminC',       'mg',   CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients')
+    ('Calories',       'kcal', 10,  CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('Protein',        'g',    20,  CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('Carbohydrates',  'g',    30,  CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('Fat',            'g',    40,  CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('Sodium',         'mg',   50,  CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('SaturatedFat',   'g',    60,  CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('DietaryFiber',   'g',    70,  CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('Sugar',          'g',    80,  CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('Cholesterol',    'mg',   90,  CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('Potassium',      'mg',   100, CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('Calcium',        'mg',   110, CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('Iron',           'mg',   120, CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('VitaminA',       'ug',   130, CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients'),
+    ('VitaminC',       'mg',   140, CURRENT_TIMESTAMP, 'Seed.BasicNutrients', CURRENT_TIMESTAMP, 'Seed.BasicNutrients')
 ON CONFLICT (nutrient_code) DO UPDATE
 SET
     unit_code = EXCLUDED.unit_code,
+    display_order = EXCLUDED.display_order,
     modified_at = CURRENT_TIMESTAMP,
     modified_by = 'Seed.BasicNutrients';
 
@@ -95,6 +97,7 @@ SELECT
     nutrient.nutrient_id,
     nutrient.nutrient_code,
     nutrient.unit_code,
+    nutrient.display_order,
     translation.lang_code,
     translation.nutrient_name
 FROM nutrient

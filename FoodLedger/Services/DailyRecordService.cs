@@ -152,7 +152,8 @@ public sealed class DailyRecordService : IDailyRecordService
                 },
                 Nutrients = _dbContext.FoodNutrients
                     .Where(nutrient => nutrient.FoodId == localizedRecord.Record.FoodId)
-                    .OrderBy(nutrient => nutrient.Nutrient.NutrientCode)
+                    .OrderBy(nutrient => nutrient.Nutrient.DisplayOrder)
+                    .ThenBy(nutrient => nutrient.Nutrient.NutrientCode)
                     .Select(nutrient => new
                     {
                         FoodNutrient = nutrient,
@@ -183,6 +184,7 @@ public sealed class DailyRecordService : IDailyRecordService
                             * localizedRecord.Record.Quantity
                             / NutritionCalculationRules.BasisGrams,
                         UnitCode = localizedNutrient.FoodNutrient.Nutrient.UnitCode,
+                        DisplayOrder = localizedNutrient.FoodNutrient.Nutrient.DisplayOrder,
                     })
                     .ToArray(),
                 QuantityInGrams = localizedRecord.Record.Quantity,

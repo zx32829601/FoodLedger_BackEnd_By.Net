@@ -19,6 +19,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     }
 
     public DbSet<DailyRecord> DailyRecords => Set<DailyRecord>();
+    public DbSet<BodyProfile> BodyProfiles => Set<BodyProfile>();
     public DbSet<DefinedCode> DefinedCodes => Set<DefinedCode>();
     public DbSet<DefinedCodeTranslation> DefinedCodeTranslations =>
         Set<DefinedCodeTranslation>();
@@ -110,8 +111,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         modelBuilder.Entity<IdentityUserLogin<long>>(entity =>
         {
             entity.ToTable("application_user_login");
-            entity.Property(e => e.LoginProvider).HasColumnName("login_provider");
-            entity.Property(e => e.ProviderKey).HasColumnName("provider_key");
+            entity.Property(e => e.LoginProvider)
+                .HasMaxLength(128)
+                .HasColumnName("login_provider");
+            entity.Property(e => e.ProviderKey)
+                .HasMaxLength(128)
+                .HasColumnName("provider_key");
             entity.Property(e => e.ProviderDisplayName).HasColumnName("provider_display_name");
             entity.Property(e => e.UserId).HasColumnName("user_id");
         });
@@ -129,8 +134,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         {
             entity.ToTable("application_user_token");
             entity.Property(e => e.UserId).HasColumnName("user_id");
-            entity.Property(e => e.LoginProvider).HasColumnName("login_provider");
-            entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(e => e.LoginProvider)
+                .HasMaxLength(128)
+                .HasColumnName("login_provider");
+            entity.Property(e => e.Name)
+                .HasMaxLength(128)
+                .HasColumnName("name");
             entity.Property(e => e.Value).HasColumnName("value");
         });
     }

@@ -15,6 +15,12 @@ public sealed class FoodNutrientResponse
     /// </summary>
     public required string DisplayName { get; init; }
 
+    /// <summary>實際採用的翻譯語系；使用穩定代碼時為 null。</summary>
+    public string? LangCode { get; init; }
+
+    /// <summary>跨 client 一致的全域顯示順位。</summary>
+    public int DisplayOrder { get; init; }
+
     /// <summary>
     /// 每 100 克食物的營養素含量。
     /// </summary>

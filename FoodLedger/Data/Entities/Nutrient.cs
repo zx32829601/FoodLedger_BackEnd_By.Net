@@ -21,6 +21,9 @@ namespace FoodLedger.Data.Entities
         [Required]
         public string UnitCode { get; set; } = NutrientUnitCodes.Gram;
 
+        [Column("display_order")]
+        public int DisplayOrder { get; set; } = 1000;
+
         public virtual ICollection<NutrientTranslation> Translations { get; set; } = [];
 
     }

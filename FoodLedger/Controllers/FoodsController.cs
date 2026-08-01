@@ -36,4 +36,27 @@ public sealed class FoodsController(IFoodSearchService foodSearchService) : Cont
         var response = await foodSearchService.SearchAsync(request, cancellationToken);
         return Ok(response);
     }
+
+    /// <summary>取得一筆食物的本地化明細與完整營養資料。</summary>
+    /// <param name="foodId">食物識別碼。</param>
+    /// <param name="langCode">BCP 47 顯示語系。</param>
+    /// <param name="cancellationToken">取消目前 HTTP request 的通知權杖。</param>
+    /// <returns>成功時回傳食物明細；不存在或沒有可用名稱時回傳 404。</returns>
+    [HttpGet("{foodId:long}")]
+    [ProducesResponseType(typeof(FoodDetailResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<FoodDetailResponse>> GetAsync(
+        long foodId,
+        [FromQuery] string langCode = FoodSearchRequest.DefaultLangCode,
+        CancellationToken cancellationToken = default)
+    {
+        if (!FoodLedger.Models.LocalizationRules.IsValidLangCode(langCode))
+        {
+            ModelState.AddModelError(nameof(langCode), FoodSearchErrorCodes.InvalidLangCode);
+            return ValidationProblem(ModelState);
+        }
+
+        var response = await foodSearchService.GetAsync(foodId, langCode, cancellationToken);
+        return response is null ? NotFound() : Ok(response);
+    }
 }
