@@ -124,9 +124,34 @@ pipeline {
 
                     def noCacheArgument = params.FORCE_DOCKER_REBUILD ? '-NoCache' : ''
 
-                    timeout(time: 10, unit: 'MINUTES') {
-                        withEnv(deploymentEnvironment) {
-                            powershell "& './scripts/deploy-local.ps1' -Pull ${noCacheArgument}"
+                    withCredentials([
+                        file(
+                            credentialsId: 'FoodLedger.env',
+                            variable: 'FOODLEDGER_ENV_FILE'
+                        )
+                    ]) {
+                        powershell '''
+                            Copy-Item `
+                                -LiteralPath $env:FOODLEDGER_ENV_FILE `
+                                -Destination (Join-Path $env:WORKSPACE '.env') `
+                                -Force
+                        '''
+
+                        try {
+                            timeout(time: 10, unit: 'MINUTES') {
+                                withEnv(deploymentEnvironment) {
+                                    powershell "& './scripts/deploy-local.ps1' -Pull ${noCacheArgument}"
+                                }
+                            }
+                        }
+                        finally {
+                            powershell '''
+                                $envPath = Join-Path $env:WORKSPACE '.env'
+
+                                if (Test-Path -LiteralPath $envPath) {
+                                    Remove-Item -LiteralPath $envPath -Force
+                                }
+                            '''
                         }
                     }
                 }
