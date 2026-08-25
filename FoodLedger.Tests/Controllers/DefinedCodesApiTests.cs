@@ -13,6 +13,8 @@ namespace FoodLedger.Tests.Controllers;
 /// <summary>
 /// 驗證 DefinedCode 公開 API 的 HTTP 契約。
 /// </summary>
+[Category("DefinedCodes")]
+[Category("Integration")]
 public class DefinedCodesApiTests
 {
     /// <summary>

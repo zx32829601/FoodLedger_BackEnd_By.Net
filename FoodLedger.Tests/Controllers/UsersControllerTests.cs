@@ -10,6 +10,8 @@ namespace FoodLedger.Tests.Controllers;
 /// <summary>
 /// 驗證 <see cref="UsersController" /> 對目前登入使用者資訊 API 的 HTTP 行為與路由設定。
 /// </summary>
+[Category("Users")]
+[Category("Unit")]
 public class UsersControllerTests
 {
     // 測試用固定值，用來代表目前登入使用者的系統識別碼。

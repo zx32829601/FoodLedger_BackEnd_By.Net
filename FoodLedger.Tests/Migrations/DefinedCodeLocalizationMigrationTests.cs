@@ -10,6 +10,8 @@ namespace FoodLedger.Tests.Migrations;
 /// 以真實 PostgreSQL 驗證 DefinedCode 多語系 migration 的資料保留與刪除限制。
 /// </summary>
 [NonParallelizable]
+[Category("DefinedCodes")]
+[Category("Integration")]
 public sealed class DefinedCodeLocalizationMigrationTests
 {
     private const string PreviousMigration = "20260727104018_AddNutrientUnitCode";
@@ -40,7 +42,6 @@ public sealed class DefinedCodeLocalizationMigrationTests
     /// 驗證升級會保留舊顯示名稱、禁止實體刪除，且 rollback 僅使用中英文或原始代碼。
     /// </summary>
     [Test]
-    [Category("Integration")]
     public async Task Migrate_WhenDefinedCodesExist_PreservesDataAndDeleteInvariant()
     {
         // Arrange

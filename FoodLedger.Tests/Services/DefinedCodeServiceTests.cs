@@ -7,6 +7,8 @@ namespace FoodLedger.Tests.Services;
 /// <summary>
 /// 驗證 <see cref="DefinedCodeService" /> 的通用代碼查詢規則。
 /// </summary>
+[Category("DefinedCodes")]
+[Category("Unit")]
 public class DefinedCodeServiceTests
 {
     /// <summary>

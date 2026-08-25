@@ -7,6 +7,8 @@ namespace FoodLedger.Tests.Services;
 /// <summary>
 /// 驗證每日營養摘要以克數和每 100 克資料進行換算。
 /// </summary>
+[Category("Nutrition")]
+[Category("Unit")]
 public class NutritionSummaryServiceTests
 {
     /// <summary>

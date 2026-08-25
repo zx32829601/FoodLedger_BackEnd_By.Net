@@ -20,6 +20,8 @@ namespace FoodLedger.Tests.Controllers;
 /// <summary>
 /// 驗證 Body Profile 的正式 HTTP 契約、授權與錯誤回應。
 /// </summary>
+[Category("BodyProfiles")]
+[Category("Integration")]
 public sealed class BodyProfilesApiTests
 {
     private const string Path = "/api/me/body-profile";

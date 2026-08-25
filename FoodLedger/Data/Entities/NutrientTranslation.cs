@@ -4,6 +4,7 @@ using FoodLedger.Models;
 
 namespace FoodLedger.Data.Entities
 {
+    /// <summary>代表營養素在指定語系下的顯示名稱。</summary>
     [Table("nutrient_translation")]
     public class NutrientTranslation : BaseEntity
     {

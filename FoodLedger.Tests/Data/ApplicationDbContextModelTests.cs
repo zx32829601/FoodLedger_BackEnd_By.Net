@@ -7,6 +7,8 @@ namespace FoodLedger.Tests.Data;
 /// <summary>
 /// 驗證 <see cref="ApplicationDbContext" /> 的 EF Core 模型設定是否符合資料隔離與資料完整性需求。
 /// </summary>
+[Category("Database")]
+[Category("Unit")]
 public class ApplicationDbContextModelTests
 {
     // 測試用資料庫名稱固定值，避免 EF Core InMemory context 在測試間共用狀態。

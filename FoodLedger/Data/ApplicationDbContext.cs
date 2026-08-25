@@ -4,12 +4,24 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
+/// <summary>
+/// FoodLedger 的 EF Core 資料存取入口，整合 Identity、領域實體設定與稽核欄位維護。
+/// </summary>
+/// <remarks>
+/// 寫入 <see cref="BaseEntity" /> 時會統一設定建立與修改時間，並以目前登入者作為異動者；
+/// 無 HTTP 使用者的 migration、seed 或測試流程則使用 <c>System</c>。
+/// </remarks>
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<long>, long>
 {
     private const string SystemActor = "System";
 
     private readonly ICurrentUserService? _currentUserService;
 
+    /// <summary>
+    /// 初始化 FoodLedger 資料庫內容。
+    /// </summary>
+    /// <param name="options">EF Core 資料庫連線與 provider 設定。</param>
+    /// <param name="currentUserService">目前登入者資訊；非 HTTP 流程可省略。</param>
     public ApplicationDbContext(
         DbContextOptions<ApplicationDbContext> options,
         ICurrentUserService? currentUserService = null)
@@ -32,6 +44,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Nutrient> Nutrients => Set<Nutrient>();
     public DbSet<NutrientTranslation> NutrientTranslations => Set<NutrientTranslation>();
 
+    /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -144,12 +157,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         });
     }
 
+    /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         ApplyAuditValues();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
+    /// <inheritdoc />
     public override Task<int> SaveChangesAsync(
         bool acceptAllChangesOnSuccess,
         CancellationToken cancellationToken = default)

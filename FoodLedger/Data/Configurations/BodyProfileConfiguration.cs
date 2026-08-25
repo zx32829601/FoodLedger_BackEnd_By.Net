@@ -4,8 +4,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FoodLedger.Data.Configurations;
 
+/// <summary>設定身體資料的欄位限制、使用者關聯與樂觀並行欄位。</summary>
 internal sealed class BodyProfileConfiguration : IEntityTypeConfiguration<BodyProfile>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<BodyProfile> entity)
     {
         entity.HasKey(profile => profile.UserId);

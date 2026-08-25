@@ -4,12 +4,14 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FoodLedger.Data.Configurations;
 
+/// <summary>設定通用代碼翻譯的複合鍵、刪除限制與內建多語系資料。</summary>
 internal sealed class DefinedCodeTranslationConfiguration
     : IEntityTypeConfiguration<DefinedCodeTranslation>
 {
     private static readonly DateTimeOffset SeededAt =
         new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<DefinedCodeTranslation> entity)
     {
         entity.HasKey(translation => new

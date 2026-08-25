@@ -18,6 +18,8 @@ namespace FoodLedger.Tests.Controllers;
 /// <summary>
 /// 驗證自訂 Auth API 經過 ASP.NET Core Identity 與 HTTP middleware 後的公開行為。
 /// </summary>
+[Category("Authentication")]
+[Category("Integration")]
 public class AuthApiTests
 {
     // 以下路徑與密碼皆為 Auth API 整合測試使用的固定值，不代表正式環境憑證。

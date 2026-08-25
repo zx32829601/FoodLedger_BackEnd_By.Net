@@ -9,6 +9,8 @@ namespace FoodLedger.Tests.Data;
 /// <summary>
 /// Verifies that the runtime relational model stays synchronized with the latest migration.
 /// </summary>
+[Category("Database")]
+[Category("Unit")]
 public sealed class MigrationModelConsistencyTests
 {
     [Test]

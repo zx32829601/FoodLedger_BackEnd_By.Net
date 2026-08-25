@@ -3,6 +3,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FoodLedger.Tests.Data;
 
+/// <summary>
+/// 驗證營養素顯示順序的 EF Core 預設值與儲存行為。
+/// </summary>
+[Category("Nutrition")]
+[Category("Unit")]
 public class NutrientDisplayOrderModelTests
 {
     [Test]

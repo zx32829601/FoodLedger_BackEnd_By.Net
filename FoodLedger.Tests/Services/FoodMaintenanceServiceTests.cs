@@ -8,6 +8,8 @@ namespace FoodLedger.Tests.Services;
 /// <summary>
 /// 驗證食物 aggregate 建立、更新、刪除與參照完整性。
 /// </summary>
+[Category("Foods")]
+[Category("Unit")]
 public class FoodMaintenanceServiceTests
 {
     [Test]

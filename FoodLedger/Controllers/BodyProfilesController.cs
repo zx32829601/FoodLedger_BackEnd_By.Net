@@ -17,6 +17,10 @@ namespace FoodLedger.Controllers;
 [Route("api/me/body-profile")]
 public sealed class BodyProfilesController(IBodyProfileService service) : ControllerBase
 {
+    /// <summary>取得目前登入使用者的身體資料與在地化選項名稱。</summary>
+    /// <param name="request">包含回應語系的查詢參數。</param>
+    /// <param name="cancellationToken">取消 request 的通知權杖。</param>
+    /// <returns>身體資料；尚未建立時回傳 404，未登入時回傳 401。</returns>
     [HttpGet]
     [ProducesResponseType(typeof(BodyProfileResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
@@ -41,6 +45,13 @@ public sealed class BodyProfilesController(IBodyProfileService service) : Contro
         }
     }
 
+    /// <summary>建立或更新目前登入使用者的唯一身體資料。</summary>
+    /// <param name="request">身體資料、選項代碼、時區與並行版本。</param>
+    /// <param name="cancellationToken">取消 request 的通知權杖。</param>
+    /// <returns>最新身體資料；驗證失敗回傳 400，版本衝突回傳 409。</returns>
+    /// <remarks>
+    /// 更新既有資料時必須帶入目前版本，避免後送出的舊畫面覆蓋較新的修改。
+    /// </remarks>
     [HttpPut]
     [CookieAntiforgery]
     [ProducesResponseType(typeof(BodyProfileResponse), StatusCodes.Status200OK)]

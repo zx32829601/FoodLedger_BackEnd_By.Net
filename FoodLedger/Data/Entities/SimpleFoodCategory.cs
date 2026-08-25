@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FoodLedger.Data.Entities
 {
+    /// <summary>代表食物與食物分類之間的多對多關聯。</summary>
     [Table("simple_food_category")]
     public class SimpleFoodCategory : BaseEntity
     {

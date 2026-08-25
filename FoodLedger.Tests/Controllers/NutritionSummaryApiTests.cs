@@ -18,6 +18,8 @@ namespace FoodLedger.Tests.Controllers;
 /// <summary>
 /// 驗證 Nutrition Summary 與營養素目錄的正式 HTTP 契約。
 /// </summary>
+[Category("Nutrition")]
+[Category("Integration")]
 public sealed class NutritionSummaryApiTests
 {
     private const string TestAuthenticationScheme = "Test";

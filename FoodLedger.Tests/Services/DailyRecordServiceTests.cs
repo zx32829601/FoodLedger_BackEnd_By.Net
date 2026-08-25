@@ -8,6 +8,8 @@ namespace FoodLedger.Tests.Services;
 /// <summary>
 /// 驗證 <see cref="DailyRecordService" /> 的每日飲食紀錄商業規則。
 /// </summary>
+[Category("DailyRecords")]
+[Category("Unit")]
 public partial class DailyRecordServiceTests
 {
     // 測試用固定目前使用者 ID，用來確認新增紀錄的擁有者來自後端登入狀態。

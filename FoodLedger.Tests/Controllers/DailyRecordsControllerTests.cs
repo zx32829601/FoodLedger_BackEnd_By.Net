@@ -10,6 +10,8 @@ namespace FoodLedger.Tests.Controllers;
 /// <summary>
 /// 驗證 <see cref="DailyRecordsController" /> 對每日飲食紀錄 API 的 HTTP 邊界行為。
 /// </summary>
+[Category("DailyRecords")]
+[Category("Unit")]
 public class DailyRecordsControllerTests
 {
     /// <summary>

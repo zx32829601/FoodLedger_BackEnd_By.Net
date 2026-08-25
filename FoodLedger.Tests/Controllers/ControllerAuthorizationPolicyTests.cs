@@ -15,6 +15,8 @@ namespace FoodLedger.Tests.Controllers;
 /// <summary>
 /// 驗證 API Controller 的授權邊界是否明確標示，避免新增匿名端點時沒有被注意到。
 /// </summary>
+[Category("Authentication")]
+[Category("Unit")]
 public class ControllerAuthorizationPolicyTests
 {
     /// <summary>
