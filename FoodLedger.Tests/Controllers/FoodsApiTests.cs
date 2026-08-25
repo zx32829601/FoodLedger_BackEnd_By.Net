@@ -19,6 +19,8 @@ namespace FoodLedger.Tests.Controllers;
 /// <summary>
 /// 驗證食物搜尋 API 的查詢、翻譯、分頁與營養資料契約。
 /// </summary>
+[Category("Foods")]
+[Category("Integration")]
 public class FoodsApiTests
 {
     private const string TestAuthenticationScheme = "Test";

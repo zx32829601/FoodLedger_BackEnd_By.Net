@@ -4,8 +4,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FoodLedger.Data.Configurations;
 
+/// <summary>設定食物與分類之間的多對多連接實體。</summary>
 internal sealed class SimpleFoodCategoryConfiguration : IEntityTypeConfiguration<SimpleFoodCategory>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<SimpleFoodCategory> entity)
     {
         entity.HasKey(e => new { e.FoodId, e.CategoryId });

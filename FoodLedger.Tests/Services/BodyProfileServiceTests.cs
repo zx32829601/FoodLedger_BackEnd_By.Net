@@ -8,6 +8,8 @@ namespace FoodLedger.Tests.Services;
 /// <summary>
 /// 驗證身體資料的所有權、驗證與樂觀並行控制。
 /// </summary>
+[Category("BodyProfiles")]
+[Category("Unit")]
 public sealed class BodyProfileServiceTests
 {
     private const long CurrentUserId = 42;

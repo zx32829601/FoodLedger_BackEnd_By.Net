@@ -4,8 +4,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FoodLedger.Data.Configurations;
 
+/// <summary>設定每日飲食紀錄的資料表、索引、欄位限制與關聯。</summary>
 internal sealed class DailyRecordConfiguration : IEntityTypeConfiguration<DailyRecord>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<DailyRecord> entity)
     {
         entity.HasKey(e => e.RecordId);

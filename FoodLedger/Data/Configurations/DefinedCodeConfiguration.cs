@@ -4,11 +4,13 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FoodLedger.Data.Configurations;
 
+/// <summary>設定通用代碼的複合鍵、欄位限制與內建代碼種子資料。</summary>
 internal sealed class DefinedCodeConfiguration : IEntityTypeConfiguration<DefinedCode>
 {
     private static readonly DateTimeOffset SeededAt =
         new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<DefinedCode> entity)
     {
         entity.HasKey(code => new { code.CodeType, code.Code });

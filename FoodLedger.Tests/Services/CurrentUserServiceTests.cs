@@ -7,6 +7,8 @@ namespace FoodLedger.Tests.Services;
 /// <summary>
 /// 驗證 <see cref="CurrentUserService" /> 從 HTTP context 解析目前登入使用者資訊的行為。
 /// </summary>
+[Category("Authentication")]
+[Category("Unit")]
 public class CurrentUserServiceTests
 {
     // 測試用固定值，用來確認 claim 可正確轉換成系統使用者識別碼。

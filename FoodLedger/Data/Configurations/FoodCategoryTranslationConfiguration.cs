@@ -4,8 +4,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FoodLedger.Data.Configurations;
 
+/// <summary>設定食物分類翻譯的欄位限制、唯一性與分類關聯。</summary>
 internal sealed class FoodCategoryTranslationConfiguration : IEntityTypeConfiguration<FoodCategoryTranslation>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<FoodCategoryTranslation> entity)
     {
         entity.HasKey(e => e.TranslationId);

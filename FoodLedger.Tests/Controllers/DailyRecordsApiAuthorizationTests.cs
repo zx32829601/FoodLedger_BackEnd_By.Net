@@ -21,6 +21,9 @@ namespace FoodLedger.Tests.Controllers;
 /// <summary>
 /// 驗證每日飲食紀錄 API 經過 ASP.NET Core middleware 後的授權行為。
 /// </summary>
+[Category("DailyRecords")]
+[Category("Authentication")]
+[Category("Integration")]
 public class DailyRecordsApiAuthorizationTests
 {
     // 測試用驗證 scheme，僅在 WebApplicationFactory 內註冊，避免依賴真實 JWT / Identity token。

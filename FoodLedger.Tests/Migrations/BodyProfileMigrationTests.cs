@@ -8,6 +8,8 @@ namespace FoodLedger.Tests.Migrations;
 /// <summary>
 /// 驗證 Body Profile migration 包含建立完整資料表所需的操作。
 /// </summary>
+[Category("BodyProfiles")]
+[Category("Unit")]
 public sealed class BodyProfileMigrationTests
 {
     [Test]

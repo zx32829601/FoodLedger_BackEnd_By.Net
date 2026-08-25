@@ -7,6 +7,8 @@ namespace FoodLedger.Tests.Services;
 /// <summary>
 /// 驗證營養素目錄依指定語系提供建立食物表單所需的標籤與單位。
 /// </summary>
+[Category("Nutrition")]
+[Category("Unit")]
 public sealed class NutrientCatalogServiceTests
 {
     /// <summary>

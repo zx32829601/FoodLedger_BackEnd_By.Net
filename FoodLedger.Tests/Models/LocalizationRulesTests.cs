@@ -5,6 +5,8 @@ namespace FoodLedger.Tests.Models;
 /// <summary>
 /// 驗證 API 共用語系與時區規則。
 /// </summary>
+[Category("Infrastructure")]
+[Category("Unit")]
 public sealed class LocalizationRulesTests
 {
     /// <summary>

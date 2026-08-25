@@ -4,8 +4,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FoodLedger.Data.Configurations;
 
+/// <summary>設定營養素代碼、單位、顯示順序與唯一性限制。</summary>
 internal sealed class NutrientConfiguration : IEntityTypeConfiguration<Nutrient>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<Nutrient> entity)
     {
         entity.HasKey(e => e.NutrientId);

@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FoodLedger.Data.Entities
 {
+    /// <summary>代表可被搜尋、記錄並維護營養資料的食物主檔。</summary>
     [Table("simple_food")]
     public class SimpleFood : BaseEntity
     {

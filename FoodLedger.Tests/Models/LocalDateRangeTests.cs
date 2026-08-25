@@ -5,6 +5,8 @@ namespace FoodLedger.Tests.Models;
 /// <summary>
 /// 驗證本地日曆日期轉換為 UTC 半開區間的共用規則。
 /// </summary>
+[Category("Infrastructure")]
+[Category("Unit")]
 public sealed class LocalDateRangeTests
 {
     /// <summary>

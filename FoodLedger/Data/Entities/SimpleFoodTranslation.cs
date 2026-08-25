@@ -4,6 +4,7 @@ using FoodLedger.Models;
 
 namespace FoodLedger.Data.Entities
 {
+    /// <summary>代表食物在指定語系下的名稱與描述。</summary>
     [Table("simple_food_translation")]
     public class SimpleFoodTranslation : BaseEntity
     {

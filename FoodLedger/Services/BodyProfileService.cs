@@ -21,6 +21,7 @@ public sealed class BodyProfileService(
     private const decimal MinimumHeight = 100m;
     private const decimal MaximumHeight = 250m;
 
+    /// <inheritdoc />
     public async Task<BodyProfileResponse> GetAsync(
         string langCode,
         CancellationToken cancellationToken = default)
@@ -45,6 +46,7 @@ public sealed class BodyProfileService(
         return Map(profile, fitnessGoal, activityLevel);
     }
 
+    /// <inheritdoc />
     public async Task<BodyProfileResponse> UpsertAsync(
         UpsertBodyProfileRequest request,
         CancellationToken cancellationToken = default)

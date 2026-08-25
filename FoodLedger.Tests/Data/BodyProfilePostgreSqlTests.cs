@@ -11,6 +11,7 @@ namespace FoodLedger.Tests.Data;
 /// 以真實 PostgreSQL 驗證 Body Profile 的 schema、關聯與並行行為。
 /// </summary>
 [NonParallelizable]
+[Category("BodyProfiles")]
 [Category("Integration")]
 public sealed class BodyProfilePostgreSqlTests
 {

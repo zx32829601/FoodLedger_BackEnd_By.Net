@@ -8,6 +8,8 @@ namespace FoodLedger.Tests.Data;
 /// 驗證 DbContext 以目前登入者統一維護資料稽核欄位。
 /// </summary>
 [TestFixture]
+[Category("Database")]
+[Category("Unit")]
 public sealed class ApplicationDbContextAuditTests
 {
     /// <summary>
