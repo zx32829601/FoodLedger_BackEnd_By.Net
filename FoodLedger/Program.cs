@@ -97,12 +97,16 @@ builder.Services
     .AddApiEndpoints();
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddDataProtection();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IdentityBearerTokenResponseFactory>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IDailyRecordService, DailyRecordService>();
 builder.Services.AddScoped<IBodyProfileService, BodyProfileService>();
+builder.Services.AddScoped<IBodyMeasurementService, BodyMeasurementService>();
+builder.Services.AddSingleton<IBodyMeasurementImpactTokenService,
+    BodyMeasurementImpactTokenService>();
 builder.Services.AddScoped<IDefinedCodeService, DefinedCodeService>();
 builder.Services.AddScoped<IFoodSearchService, FoodSearchService>();
 builder.Services.AddScoped<IFoodMaintenanceService, FoodMaintenanceService>();
