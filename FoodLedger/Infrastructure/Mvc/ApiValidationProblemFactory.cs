@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FoodLedger.DTOs.Errors;
+using FoodLedger.DTOs.BodyMeasurements;
 using FoodLedger.DTOs.Foods;
 using Microsoft.AspNetCore.Mvc;
 
@@ -64,6 +65,7 @@ public static class ApiValidationProblemFactory
         var code = errorMessage.StartsWith("Auth.", StringComparison.Ordinal)
             || errorMessage.StartsWith("DailyRecord.", StringComparison.Ordinal)
             || errorMessage.StartsWith("BodyProfile.", StringComparison.Ordinal)
+            || errorMessage.StartsWith("BodyMeasurement.", StringComparison.Ordinal)
             || errorMessage.StartsWith("DefinedCode.", StringComparison.Ordinal)
             || errorMessage.StartsWith("FoodSearch.", StringComparison.Ordinal)
             || errorMessage.StartsWith("FoodMaintenance.", StringComparison.Ordinal)
@@ -89,6 +91,22 @@ public static class ApiValidationProblemFactory
                 BodyProfileErrorCodes.InvalidFitnessGoal => "健身目標代碼不存在或已停用。",
                 BodyProfileErrorCodes.InvalidActivityLevel => "活動程度代碼不存在或已停用。",
                 BodyProfileErrorCodes.InvalidTimeZone => "時區代碼不存在或無效。",
+                BodyMeasurementErrorCodes.WeightOutOfRange =>
+                    "體重必須介於 20 到 400 公斤。",
+                BodyMeasurementErrorCodes.BodyFatOutOfRange =>
+                    "體脂率必須介於 2% 到 70%。",
+                BodyMeasurementErrorCodes.MuscleMassOutOfRange =>
+                    "肌肉量必須大於 0 且不可超過體重。",
+                BodyMeasurementErrorCodes.PrecisionExceeded =>
+                    "身體測量值最多可輸入兩位小數。",
+                BodyMeasurementErrorCodes.PageOutOfRange =>
+                    "頁碼必須大於或等於 1。",
+                BodyMeasurementErrorCodes.PageSizeOutOfRange =>
+                    "每頁筆數必須介於 1 到 100 之間。",
+                BodyMeasurementErrorCodes.InvalidDateRange =>
+                    "起始日期不可晚於結束日期。",
+                BodyMeasurementErrorCodes.VersionRequired => "請提供最後讀取的版本。",
+                BodyMeasurementErrorCodes.ImpactTokenRequired => "請先取得刪除影響預覽。",
                 ApiValidationErrorCodes.UserAccountInvalid =>
                     "使用者帳號須為 4 到 30 個英文字母、數字、底線或連字號。",
                 ApiValidationErrorCodes.DisplayNameInvalid =>
@@ -126,6 +144,29 @@ public static class ApiValidationProblemFactory
                     new Dictionary<string, object?> { ["min"] = 18, ["max"] = 120 },
                 BodyProfileErrorCodes.HeightOutOfRange =>
                     new Dictionary<string, object?> { ["min"] = 100, ["max"] = 250 },
+                BodyMeasurementErrorCodes.WeightOutOfRange =>
+                    new Dictionary<string, object?>
+                    {
+                        ["min"] = BodyMeasurementRules.MinimumWeight,
+                        ["max"] = BodyMeasurementRules.MaximumWeight,
+                    },
+                BodyMeasurementErrorCodes.BodyFatOutOfRange =>
+                    new Dictionary<string, object?>
+                    {
+                        ["min"] = BodyMeasurementRules.MinimumBodyFatPercentage,
+                        ["max"] = BodyMeasurementRules.MaximumBodyFatPercentage,
+                    },
+                BodyMeasurementErrorCodes.PageOutOfRange =>
+                    new Dictionary<string, object?>
+                    {
+                        ["min"] = BodyMeasurementRules.MinimumPage,
+                    },
+                BodyMeasurementErrorCodes.PageSizeOutOfRange =>
+                    new Dictionary<string, object?>
+                    {
+                        ["min"] = BodyMeasurementRules.MinimumPageSize,
+                        ["max"] = BodyMeasurementRules.MaximumPageSize,
+                    },
                 FoodSearchErrorCodes.PageOutOfRange =>
                     new Dictionary<string, object?>
                     {
